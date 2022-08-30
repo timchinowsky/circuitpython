@@ -40,7 +40,6 @@ aliases_by_board = {
     "pybadge": ["edgebadge"],
     "pyportal": ["pyportal_pynt"],
     "gemma_m0": ["gemma_m0_pycon2018"],
-    "pewpew10": ["pewpew13"],
 }
 
 aliases_brand_names = {
@@ -54,8 +53,6 @@ aliases_brand_names = {
         "Adafruit PyPortal Pynt",
     "gemma_m0_pycon2018":
         "Adafruit Gemma M0 PyCon 2018",
-    "pewpew13":
-        "PewPew 13",
 }
 
 additional_modules = {
