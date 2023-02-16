@@ -53,12 +53,14 @@ void mdns_server_construct(mdns_server_obj_t *self, bool workflow) {
         return;
     }
 
+    MICROPY_PY_LWIP_ENTER;
     if (!inited) {
         mdns_resp_init();
         inited = true;
     } else {
         mdns_resp_restart(NETIF_STA);
     }
+    MICROPY_PY_LWIP_EXIT;
     self->inited = true;
 
     uint8_t mac[6];
@@ -70,7 +72,9 @@ void mdns_server_construct(mdns_server_obj_t *self, bool workflow) {
         // Add a second host entry to respond to "circuitpython.local" queries as well.
 
         #if MDNS_MAX_SECONDARY_HOSTNAMES > 0
+        MICROPY_PY_LWIP_ENTER;
         mdns_resp_add_secondary_hostname(NETIF_STA, "circuitpython");
+        MICROPY_PY_LWIP_EXIT;
         #endif
     }
 }
@@ -92,7 +96,9 @@ void common_hal_mdns_server_deinit(mdns_server_obj_t *self) {
     }
     self->inited = false;
     object_inited = false;
+    MICROPY_PY_LWIP_ENTER;
     mdns_resp_remove_netif(NETIF_STA);
+    MICROPY_PY_LWIP_EXIT;
 }
 
 bool common_hal_mdns_server_deinited(mdns_server_obj_t *self) {
@@ -104,11 +110,13 @@ const char *common_hal_mdns_server_get_hostname(mdns_server_obj_t *self) {
 }
 
 void common_hal_mdns_server_set_hostname(mdns_server_obj_t *self, const char *hostname) {
+    MICROPY_PY_LWIP_ENTER;
     if (mdns_resp_netif_active(NETIF_STA)) {
         mdns_resp_rename_netif(NETIF_STA, hostname);
     } else {
         mdns_resp_add_netif(NETIF_STA, hostname);
     }
+    MICROPY_PY_LWIP_EXIT;
 
     self->hostname = hostname;
 }
@@ -313,7 +321,9 @@ void common_hal_mdns_server_advertise_service(mdns_server_obj_t *self, const cha
     if (existing_slot < MDNS_MAX_SERVICES) {
         mdns_resp_del_service(NETIF_STA, existing_slot);
     }
+    MICROPY_PY_LWIP_ENTER;
     int8_t slot = mdns_resp_add_service(NETIF_STA, self->instance_name, service_type, proto, port, NULL, NULL);
+    MICROPY_PY_LWIP_EXIT;
     if (slot < 0) {
         mp_raise_RuntimeError(translate("Out of MDNS service slots"));
         return;
