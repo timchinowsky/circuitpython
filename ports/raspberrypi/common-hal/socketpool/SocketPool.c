@@ -62,9 +62,9 @@ STATIC int socketpool_resolve_host(socketpool_socketpool_obj_t *self, const char
     getaddrinfo_state_t state;
     state.status = 0;
 
-    MICROPY_PY_LWIP_ENTER
+    MICROPY_PY_LWIP_ENTER;
     err_t ret = dns_gethostbyname(host, (ip_addr_t *)&state.ipaddr, lwip_getaddrinfo_cb, &state);
-    MICROPY_PY_LWIP_EXIT
+    MICROPY_PY_LWIP_EXIT;
 
     switch (ret) {
         case ERR_OK:

@@ -148,8 +148,10 @@ STATIC void lwip_socket_free_incoming(socketpool_socket_obj_t *socket) {
         for (uint8_t i = 0; i < alloc; ++i) {
             // Deregister callback and abort
             if (tcp_array[i] != NULL) {
+                MICROPY_PY_LWIP_ENTER;
                 tcp_poll(tcp_array[i], NULL, 0);
                 tcp_abort(tcp_array[i]);
+                MICROPY_PY_LWIP_EXIT;
                 tcp_array[i] = NULL;
             }
         }
@@ -283,7 +285,9 @@ STATIC err_t _lwip_tcp_accept(void *arg, struct tcp_pcb *newpcb, err_t err) {
     }
 
     socketpool_socket_obj_t *socket = (socketpool_socket_obj_t *)arg;
+    MICROPY_PY_LWIP_ENTER;
     tcp_recv(newpcb, _lwip_tcp_recv_unaccepted);
+    MICROPY_PY_LWIP_EXIT;
 
     // Search for an empty slot to store the new connection
     struct tcp_pcb *volatile *slot = &lwip_socket_incoming_array(socket)[socket->incoming.connection.iput];
@@ -302,8 +306,10 @@ STATIC err_t _lwip_tcp_accept(void *arg, struct tcp_pcb *newpcb, err_t err) {
         // The ->connected entry is repurposed to store the parent socket; this is safe
         // because it's only ever used by lwIP if tcp_connect is called on the TCP PCB.
         newpcb->connected = (void *)socket;
+        MICROPY_PY_LWIP_ENTER;
         tcp_arg(newpcb, newpcb);
         tcp_err(newpcb, _lwip_tcp_err_unaccepted);
+        MICROPY_PY_LWIP_EXIT;
 
         return ERR_OK;
     }
@@ -350,11 +356,11 @@ STATIC mp_uint_t lwip_raw_udp_send(socketpool_socket_obj_t *socket, const byte *
         len = 0xffff;
     }
 
-    MICROPY_PY_LWIP_ENTER
+    MICROPY_PY_LWIP_ENTER;
 
     struct pbuf *p = pbuf_alloc(PBUF_TRANSPORT, len, PBUF_RAM);
     if (p == NULL) {
-        MICROPY_PY_LWIP_EXIT
+        MICROPY_PY_LWIP_EXIT;
         *_errno = MP_ENOMEM;
         return -1;
     }
@@ -384,7 +390,7 @@ STATIC mp_uint_t lwip_raw_udp_send(socketpool_socket_obj_t *socket, const byte *
 
     pbuf_free(p);
 
-    MICROPY_PY_LWIP_EXIT
+    MICROPY_PY_LWIP_EXIT;
 
     // udp_sendto can return 1 on occasion for ESP8266 port.  It's not known why
     // but it seems that the send actually goes through without error in this case.
@@ -425,13 +431,13 @@ STATIC mp_uint_t lwip_raw_udp_receive(socketpool_socket_obj_t *socket, byte *buf
 
     struct pbuf *p = socket->incoming.pbuf;
 
-    MICROPY_PY_LWIP_ENTER
+    MICROPY_PY_LWIP_ENTER;
 
     u16_t result = pbuf_copy_partial(p, buf, ((p->tot_len > len) ? len : p->tot_len), 0);
     pbuf_free(p);
     socket->incoming.pbuf = NULL;
 
-    MICROPY_PY_LWIP_EXIT
+    MICROPY_PY_LWIP_EXIT;
 
     return (mp_uint_t)result;
 }
@@ -459,14 +465,14 @@ STATIC mp_uint_t lwip_tcp_send(socketpool_socket_obj_t *socket, const byte *buf,
     // Check for any pending errors
     STREAM_ERROR_CHECK(socket);
 
-    MICROPY_PY_LWIP_ENTER
+    MICROPY_PY_LWIP_ENTER;
 
     u16_t available = tcp_sndbuf(socket->pcb.tcp);
 
     if (available == 0) {
         // Non-blocking socket
         if (socket->timeout == 0) {
-            MICROPY_PY_LWIP_EXIT
+            MICROPY_PY_LWIP_EXIT;
             *_errno = MP_EAGAIN;
             return MP_STREAM_ERROR;
         }
@@ -479,13 +485,13 @@ STATIC mp_uint_t lwip_tcp_send(socketpool_socket_obj_t *socket, const byte *buf,
         // reset) by error callback.
         // Avoid sending too small packets, so wait until at least 16 bytes available
         while (socket->state >= STATE_CONNECTED && (available = tcp_sndbuf(socket->pcb.tcp)) < 16) {
-            MICROPY_PY_LWIP_EXIT
+            MICROPY_PY_LWIP_EXIT;
             if (socket->timeout != (unsigned)-1 && mp_hal_ticks_ms() - start > socket->timeout) {
                 *_errno = MP_ETIMEDOUT;
                 return MP_STREAM_ERROR;
             }
             poll_sockets();
-            MICROPY_PY_LWIP_REENTER
+            MICROPY_PY_LWIP_REENTER;
         }
 
         // While we waited, something could happen
@@ -514,9 +520,9 @@ STATIC mp_uint_t lwip_tcp_send(socketpool_socket_obj_t *socket, const byte *buf,
         if (err != ERR_OK) {
             break;
         }
-        MICROPY_PY_LWIP_EXIT
+        MICROPY_PY_LWIP_EXIT;
         mp_hal_delay_ms(50);
-        MICROPY_PY_LWIP_REENTER
+        MICROPY_PY_LWIP_REENTER;
     }
 
     // If the output buffer is getting full then send the data to the lower layers
@@ -524,7 +530,7 @@ STATIC mp_uint_t lwip_tcp_send(socketpool_socket_obj_t *socket, const byte *buf,
         err = tcp_output(socket->pcb.tcp);
     }
 
-    MICROPY_PY_LWIP_EXIT
+    MICROPY_PY_LWIP_EXIT;
 
     if (err != ERR_OK) {
         *_errno = error_lookup_table[-err];
@@ -574,7 +580,7 @@ STATIC mp_uint_t lwip_tcp_receive(socketpool_socket_obj_t *socket, byte *buf, mp
         }
     }
 
-    MICROPY_PY_LWIP_ENTER
+    MICROPY_PY_LWIP_ENTER;
 
     assert(socket->pcb.tcp != NULL);
 
@@ -601,7 +607,7 @@ STATIC mp_uint_t lwip_tcp_receive(socketpool_socket_obj_t *socket, byte *buf, mp
     }
     tcp_recved(socket->pcb.tcp, len);
 
-    MICROPY_PY_LWIP_EXIT
+    MICROPY_PY_LWIP_EXIT;
 
     return len;
 }
@@ -680,17 +686,23 @@ bool socketpool_socket(socketpool_socketpool_obj_t *self,
 
     switch (socket->type) {
         case SOCKETPOOL_SOCK_STREAM:
+            MICROPY_PY_LWIP_ENTER;
             socket->pcb.tcp = tcp_new();
+            MICROPY_PY_LWIP_EXIT;
             socket->incoming.connection.alloc = 0;
             socket->incoming.connection.tcp.item = NULL;
             break;
         case SOCKETPOOL_SOCK_DGRAM:
+            MICROPY_PY_LWIP_ENTER;
             socket->pcb.udp = udp_new();
+            MICROPY_PY_LWIP_EXIT;
             socket->incoming.pbuf = NULL;
             break;
         #if MICROPY_PY_LWIP_SOCK_RAW
         case SOCKETPOOL_SOCK_RAW: {
+            MICROPY_PY_LWIP_ENTER;
             socket->pcb.raw = raw_new(0);
+            MICROPY_PY_LWIP_EXIT;
             break;
         }
         #endif
@@ -704,24 +716,30 @@ bool socketpool_socket(socketpool_socketpool_obj_t *self,
 
     switch (socket->type) {
         case MOD_NETWORK_SOCK_STREAM: {
+            MICROPY_PY_LWIP_ENTER;
             // Register the socket object as our callback argument.
             tcp_arg(socket->pcb.tcp, (void *)socket);
             // Register our error callback.
             tcp_err(socket->pcb.tcp, _lwip_tcp_error);
+            MICROPY_PY_LWIP_EXIT;
             break;
         }
         case MOD_NETWORK_SOCK_DGRAM: {
             socket->state = STATE_ACTIVE_UDP;
+            MICROPY_PY_LWIP_ENTER;
             // Register our receive callback now. Since UDP sockets don't require binding or connection
             // before use, there's no other good time to do it.
             udp_recv(socket->pcb.udp, _lwip_udp_incoming, (void *)socket);
+            MICROPY_PY_LWIP_EXIT;
             break;
         }
         #if MICROPY_PY_LWIP_SOCK_RAW
         case MOD_NETWORK_SOCK_RAW: {
+            MICROPY_PY_LWIP_ENTER;
             // Register our receive callback now. Since raw sockets don't require binding or connection
             // before use, there's no other good time to do it.
             raw_recv(socket->pcb.raw, _lwip_raw_incoming, (void *)socket);
+            MICROPY_PY_LWIP_EXIT;
             break;
         }
         #endif
@@ -755,17 +773,17 @@ int socketpool_socket_accept(socketpool_socket_obj_t *self, uint8_t *ip, uint32_
         return -MP_EBADF;
     }
 
-    MICROPY_PY_LWIP_ENTER
+    MICROPY_PY_LWIP_ENTER;
 
     if (self->pcb.tcp == NULL) {
-        MICROPY_PY_LWIP_EXIT
+        MICROPY_PY_LWIP_EXIT;
         return -MP_EBADF;
     }
 
     // I need to do this because "tcp_accepted", later, is a macro.
     struct tcp_pcb *listener = self->pcb.tcp;
     if (listener->state != LISTEN) {
-        MICROPY_PY_LWIP_EXIT
+        MICROPY_PY_LWIP_EXIT;
         return -MP_EINVAL;
     }
 
@@ -773,23 +791,23 @@ int socketpool_socket_accept(socketpool_socket_obj_t *self, uint8_t *ip, uint32_
     struct tcp_pcb *volatile *incoming_connection = &lwip_socket_incoming_array(self)[self->incoming.connection.iget];
     if (*incoming_connection == NULL) {
         if (self->timeout == 0) {
-            MICROPY_PY_LWIP_EXIT
+            MICROPY_PY_LWIP_EXIT;
             return -MP_EAGAIN;
         } else if (self->timeout != (unsigned)-1) {
             mp_uint_t retries = self->timeout / 100;
             while (*incoming_connection == NULL && !mp_hal_is_interrupted()) {
-                MICROPY_PY_LWIP_EXIT
+                MICROPY_PY_LWIP_EXIT;
                 if (retries-- == 0) {
                     return -MP_ETIMEDOUT;
                 }
                 mp_hal_delay_ms(100);
-                MICROPY_PY_LWIP_REENTER
+                MICROPY_PY_LWIP_REENTER;
             }
         } else {
             while (*incoming_connection == NULL && !mp_hal_is_interrupted()) {
-                MICROPY_PY_LWIP_EXIT
+                MICROPY_PY_LWIP_EXIT;
                 poll_sockets();
-                MICROPY_PY_LWIP_REENTER
+                MICROPY_PY_LWIP_REENTER;
             }
         }
     }
@@ -825,7 +843,7 @@ int socketpool_socket_accept(socketpool_socket_obj_t *self, uint8_t *ip, uint32_
 
     tcp_accepted(listener);
 
-    MICROPY_PY_LWIP_EXIT
+    MICROPY_PY_LWIP_EXIT;
 
     // output values
     memcpy(ip, &(accepted->pcb.tcp->remote_ip), NETUTILS_IPV4ADDR_BUFSIZE);
@@ -879,6 +897,7 @@ bool common_hal_socketpool_socket_bind(socketpool_socket_obj_t *socket,
     ip_set_option(socket->pcb.ip, SOF_REUSEADDR);
 
     err_t err = ERR_ARG;
+    MICROPY_PY_LWIP_ENTER;
     switch (socket->type) {
         case MOD_NETWORK_SOCK_STREAM: {
             err = tcp_bind(socket->pcb.tcp, bind_addr_ptr, port);
@@ -889,6 +908,7 @@ bool common_hal_socketpool_socket_bind(socketpool_socket_obj_t *socket,
             break;
         }
     }
+    MICROPY_PY_LWIP_EXIT;
 
     if (err != ERR_OK) {
         mp_raise_OSError(error_lookup_table[-err]);
@@ -899,16 +919,18 @@ bool common_hal_socketpool_socket_bind(socketpool_socket_obj_t *socket,
 
 STATIC err_t _lwip_tcp_close_poll(void *arg, struct tcp_pcb *pcb) {
     // Connection has not been cleanly closed so just abort it to free up memory
+    MICROPY_PY_LWIP_ENTER;
     tcp_poll(pcb, NULL, 0);
     tcp_abort(pcb);
+    MICROPY_PY_LWIP_EXIT;
     return ERR_OK;
 }
 
 void socketpool_socket_close(socketpool_socket_obj_t *socket) {
     unregister_open_socket(socket);
-    MICROPY_PY_LWIP_ENTER
+    MICROPY_PY_LWIP_ENTER;
     if (socket->pcb.tcp == NULL) { // already closed
-        MICROPY_PY_LWIP_EXIT
+        MICROPY_PY_LWIP_EXIT;
         return;
     }
     lwip_socket_free_incoming(socket);
@@ -945,7 +967,7 @@ void socketpool_socket_close(socketpool_socket_obj_t *socket) {
 
     socket->pcb.tcp = NULL;
     socket->state = _ERR_BADF;
-    MICROPY_PY_LWIP_EXIT
+    MICROPY_PY_LWIP_EXIT;
 }
 
 void common_hal_socketpool_socket_close(socketpool_socket_obj_t *socket) {
@@ -975,18 +997,18 @@ void common_hal_socketpool_socket_connect(socketpool_socket_obj_t *socket,
             }
 
             // Register our receive callback.
-            MICROPY_PY_LWIP_ENTER
+            MICROPY_PY_LWIP_ENTER;
             tcp_recv(socket->pcb.tcp, _lwip_tcp_recv);
             socket->state = STATE_CONNECTING;
             err = tcp_connect(socket->pcb.tcp, &dest, port, _lwip_tcp_connected);
             if (err != ERR_OK) {
-                MICROPY_PY_LWIP_EXIT
+                MICROPY_PY_LWIP_EXIT;
                 socket->state = STATE_NEW;
                 mp_raise_OSError(error_lookup_table[-err]);
             }
             socket->peer_port = (mp_uint_t)port;
             memcpy(socket->peer, &dest, sizeof(socket->peer));
-            MICROPY_PY_LWIP_EXIT
+            MICROPY_PY_LWIP_EXIT;
 
             // And now we wait...
             if (socket->timeout != (unsigned)-1) {
@@ -1012,12 +1034,16 @@ void common_hal_socketpool_socket_connect(socketpool_socket_obj_t *socket,
             break;
         }
         case MOD_NETWORK_SOCK_DGRAM: {
+            MICROPY_PY_LWIP_ENTER;
             err = udp_connect(socket->pcb.udp, &dest, port);
+            MICROPY_PY_LWIP_EXIT;
             break;
         }
         #if MICROPY_PY_LWIP_SOCK_RAW
         case MOD_NETWORK_SOCK_RAW: {
+            MICROPY_PY_LWIP_ENTER;
             err = raw_connect(socket->pcb.raw, &dest);
+            MICROPY_PY_LWIP_EXIT;
             break;
         }
         #endif
@@ -1041,7 +1067,9 @@ bool common_hal_socketpool_socket_listen(socketpool_socket_obj_t *socket, int ba
         mp_raise_OSError(MP_EOPNOTSUPP);
     }
 
+    MICROPY_PY_LWIP_ENTER;
     struct tcp_pcb *new_pcb = tcp_listen_with_backlog(socket->pcb.tcp, (u8_t)backlog);
+    MICROPY_PY_LWIP_EXIT;
     if (new_pcb == NULL) {
         mp_raise_OSError(MP_ENOMEM);
     }
@@ -1058,7 +1086,9 @@ bool common_hal_socketpool_socket_listen(socketpool_socket_obj_t *socket, int ba
     socket->incoming.connection.iget = 0;
     socket->incoming.connection.iput = 0;
 
+    MICROPY_PY_LWIP_ENTER;
     tcp_accept(new_pcb, _lwip_tcp_accept);
+    MICROPY_PY_LWIP_EXIT;
 
     // Socket is no longer considered "new" for purposes of polling
     socket->state = STATE_LISTENING;

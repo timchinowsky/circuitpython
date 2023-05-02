@@ -138,6 +138,7 @@ mp_obj_t common_hal_wifi_radio_start_scanning_networks(wifi_radio_obj_t *self, u
     wifi_scannednetworks_obj_t *scan = m_new_obj(wifi_scannednetworks_obj_t);
     scan->base.type = &wifi_scannednetworks_type;
     mp_obj_t args[] = { mp_const_empty_tuple, MP_OBJ_NEW_SMALL_INT(16) };
+    MP_STATIC_ASSERT(MICROPY_PY_COLLECTIONS_DEQUE);
     scan->results = mp_type_deque.make_new(&mp_type_deque, 2, 0, args);
     self->current_scan = scan;
     wifi_scannednetworks_start_scan(scan);
@@ -343,11 +344,15 @@ void common_hal_wifi_radio_set_ipv4_dns(wifi_radio_obj_t *self, mp_obj_t ipv4_dn
 }
 
 void common_hal_wifi_radio_start_dhcp_client(wifi_radio_obj_t *self) {
+    MICROPY_PY_LWIP_ENTER;
     dhcp_start(NETIF_STA);
+    MICROPY_PY_LWIP_EXIT;
 }
 
 void common_hal_wifi_radio_stop_dhcp_client(wifi_radio_obj_t *self) {
+    MICROPY_PY_LWIP_ENTER;
     dhcp_stop(NETIF_STA);
+    MICROPY_PY_LWIP_EXIT;
 }
 
 void common_hal_wifi_radio_set_ipv4_address(wifi_radio_obj_t *self, mp_obj_t ipv4, mp_obj_t netmask, mp_obj_t gateway, mp_obj_t ipv4_dns) {
@@ -398,17 +403,17 @@ mp_int_t common_hal_wifi_radio_ping(wifi_radio_obj_t *self, mp_obj_t ip_address,
     ipaddress_ipaddress_to_lwip(ip_address, &ping_addr);
 
     struct raw_pcb *ping_pcb;
-    MICROPY_PY_LWIP_ENTER
-        ping_pcb = raw_new(IP_PROTO_ICMP);
+    MICROPY_PY_LWIP_ENTER;
+    ping_pcb = raw_new(IP_PROTO_ICMP);
     if (!ping_pcb) {
-        MICROPY_PY_LWIP_EXIT
+        MICROPY_PY_LWIP_EXIT;
         return -1;
     }
     raw_recv(ping_pcb, ping_recv, NULL);
     raw_bind(ping_pcb, IP_ADDR_ANY);
-    MICROPY_PY_LWIP_EXIT
+    MICROPY_PY_LWIP_EXIT;
 
-        ping_received = false;
+    ping_received = false;
     ping_send(ping_pcb, &ping_addr);
     size_t timeout_ms = (size_t)MICROPY_FLOAT_C_FUN(ceil)(timeout * 1000);
     uint64_t start = port_get_raw_ticks(NULL);
