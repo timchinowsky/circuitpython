@@ -9,7 +9,7 @@ On a Linux machine with `docker` installed, an executable for any supported Circ
     sudo tools/docker-build/build atmel-samd grandcentral_m4_express DEBUG=1
 ```
 
-will build executables for a Feather ESP32S2 board and a Waveshare RP2040 board, and build an executable which includes debugging information for an Adafruit Grand Cental M4 Express board.
+will build executables for a Feather ESP32S2 board, a Waveshare RP2040 board and an Adafruit Grand Central M4 Express board, and the Grand Central build will include debugging information.
 
 ## Building a new Docker image
 
@@ -20,6 +20,3 @@ The `build` script uses tools built into a container image pulled from a public 
 ```
 
 Where <name> is the name that will be applied to the image.  If you then change the value of `$LOCAL_IMAGE` in the `build` script to match <name>, `build` will use the new image for building CircuitPython.
-
- 
-
