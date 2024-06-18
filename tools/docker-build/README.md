@@ -1,6 +1,6 @@
 # Building CircuitPython with Docker
 
-On a Linux machine with `docker` installed, an executable for any supported CircuitPython board can be built without setup by invoking the command `tools/docker-build/build <port> <board-name> <option>` from the CircuitPython root directory.  For example, if the CircuitPython repo is located at `~/circuitpython` the commands
+On a Linux machine with `docker` installed, an executable for any supported CircuitPython board can be built without setup by invoking the command `sudo tools/docker-build/build <port> <board-name> <option>` from the CircuitPython root directory.  For example, if the CircuitPython repo is located at `~/circuitpython` the commands
 
 ```bash
     cd ~/circuitpython
