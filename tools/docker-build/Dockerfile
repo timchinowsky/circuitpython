@@ -1,4 +1,3 @@
-# Use a base image with the necessary tools
 FROM ubuntu:24.04 as build
 
 RUN apt-get update && apt-get install -y build-essential software-properties-common git git-lfs gettext cmake mtools wget curl which
@@ -21,8 +20,6 @@ RUN apt-get install -y git wget flex bison gperf python3 python3-pip python3-ven
 
 RUN apt-get install -y ccache libffi-dev libssl-dev dfu-util libusb-1.0-0 python-is-python3
 
-# RUN mkdir -p /root/adafruit && cd /root/adafruit && git clone https://github.com/adafruit/circuitpython.git
-
 ENV IDF_TOOLS_PATH=/root/.espressif
 ENV IDF_PATH=/root/esp/esp-idf
 
@@ -37,20 +34,8 @@ RUN curl -LO https://raw.githubusercontent.com/adafruit/circuitpython/main/requi
 RUN . /root/esp/esp-idf/export.sh && pip3 install --upgrade -r requirements-dev.txt && \
            pip3 install --upgrade -r requirements-doc.txt
 
-# RUN . /root/esp/esp-idf/export.sh && pip3 install --upgrade -r /root/adafruit/circuitpython/requirements-dev.txt && \
-#           pip3 install --upgrade -r /root/adafruit/circuitpython/requirements-doc.txt
-
-# RUN cd /root/adafruit/circuitpython && make fetch-all-submodules
-
-# RUN cd /root/adafruit/circuitpython/ports/espressif && . /root/esp/esp-idf/export.sh && make BOARD=espressif_esp32s3_devkitc_1_n8
-
-# RUN rm -rf /root/adafruit
-
 COPY build.sh /root
 
 RUN chmod +x /root/build.sh
 
 ENTRYPOINT ["/bin/bash"]
-
-# sudo chown -R "${USER:-$(id -un)}" .
-
