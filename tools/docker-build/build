@@ -1,0 +1,9 @@
+#!/bin/bash
+REMOTE_IMAGE="timchinowsky/build_circuitpython"
+LOCAL_IMAGE="timchinowsky/build_circuitpython"
+
+make fetch-all-submodules
+docker pull $REMOTE_IMAGE
+docker run -it -v .:/root/circuitpython $LOCAL_IMAGE /root/build.sh $1 $2 $3
+chown -R `(stat -c '%u' Makefile)`:`(stat -c '%g' Makefile)` *
+chown -R `(stat -c '%u' Makefile)`:`(stat -c '%g' Makefile)` .git
