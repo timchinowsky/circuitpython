@@ -1,15 +1,15 @@
 # Building CircuitPython with Docker
 
-On a Linux machine with `docker` installed, an executable for any supported CircuitPython board can be built without setup by invoking the command `sudo tools/docker-build/build <port> <board-name> <option>` from the CircuitPython root directory.  For example, if the CircuitPython repo is located at `~/circuitpython` the commands
+On a Linux machine with `docker` installed, an executable for any supported CircuitPython board can be built without setup by invoking the command `tools/docker-build/build <port> <board-name> <option>` from the CircuitPython root directory.  For example, if the CircuitPython repo is located at `~/circuitpython` the commands
 
 ```bash
     cd ~/circuitpython
-    sudo tools/docker-build/build espressif adafruit_feather_esp32s2_reverse_tft
-    sudo tools/docker-build/build raspberrypi waveshare_rp2040_zero
-    sudo tools/docker-build/build atmel-samd grandcentral_m4_express DEBUG=1
+    tools/docker-build/build espressif adafruit_feather_esp32s2_reverse_tft
+    tools/docker-build/build raspberrypi waveshare_rp2040_zero
+    tools/docker-build/build atmel-samd grandcentral_m4_express DEBUG=1 TRANSLATION=es
 ```
 
-will build executables for a Feather ESP32S2 board, a Waveshare RP2040 board and an Adafruit Grand Central M4 Express board, and the Grand Central build will include debugging information.
+will build executables for a Feather ESP32S2 board, a Waveshare RP2040 board and an Adafruit Grand Central M4 Express board, and the Grand Central build will include debugging information and Spanish localization.
 
 ## Building a new Docker image
 
