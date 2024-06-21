@@ -252,17 +252,18 @@ void common_hal_audiobusio_i2sout_play(audiobusio_i2sout_obj_t *self,
     // See section 2.1.4 Narrow IO Register Writes in the RP2040 datasheet.
     // This means that identical 16-bit audio data will be written in both halves of the incoming PIO
     // FIFO register. Thus we get mono-to-stereo conversion for the I2S output for free.
-    audio_dma_result result = audio_dma_setup_playback(
+    audio_dma_result result = audio_dma_setup_transfer(
         &self->dma,
         sample,
         loop,
-        false, // single channel
-        0, // audio channel
-        true,  // output signed
+        false, // single sided
+        0, // audio side
+        true,  // register signed
         bits_per_sample,
         (uint32_t)&self->state_machine.pio->txf[self->state_machine.state_machine],  // output register
         self->state_machine.tx_dreq, // data request line
-        false); // swap channel
+        false, // swap channel
+        true); // is output
 
     if (result == AUDIO_DMA_DMA_BUSY) {
         common_hal_audiobusio_i2sout_stop(self);
@@ -298,7 +299,7 @@ void common_hal_audiobusio_i2sout_stop(audiobusio_i2sout_obj_t *self) {
 }
 
 bool common_hal_audiobusio_i2sout_get_playing(audiobusio_i2sout_obj_t *self) {
-    bool playing = audio_dma_get_playing(&self->dma);
+    bool playing = audio_dma_is_active(&self->dma);
     if (!playing && self->playing) {
         common_hal_audiobusio_i2sout_stop(self);
     }

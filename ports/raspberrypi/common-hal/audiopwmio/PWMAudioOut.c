@@ -194,7 +194,7 @@ void common_hal_audiopwmio_pwmaudioout_play(audiopwmio_pwmaudioout_obj_t *self, 
     uint32_t best_numerator = limit_denominator(0xffff, sample_rate, system_clock, &best_denominator);
 
     dma_hw->timer[pacing_timer] = best_numerator << 16 | best_denominator;
-    audio_dma_result result = audio_dma_setup_playback(
+    audio_dma_result result = audio_dma_setup_transfer(
         &self->dma,
         sample,
         loop,
@@ -204,7 +204,8 @@ void common_hal_audiopwmio_pwmaudioout_play(audiopwmio_pwmaudioout_obj_t *self, 
         BITS_PER_SAMPLE,
         (uint32_t)tx_register,  // output register: PWM cc register
         0x3b + pacing_timer, // data request line
-        self->swap_channel);
+        self->swap_channel,
+        true);
 
     if (result == AUDIO_DMA_DMA_BUSY) {
         common_hal_audiopwmio_pwmaudioout_stop(self);
@@ -235,7 +236,7 @@ void common_hal_audiopwmio_pwmaudioout_stop(audiopwmio_pwmaudioout_obj_t *self) 
 }
 
 bool common_hal_audiopwmio_pwmaudioout_get_playing(audiopwmio_pwmaudioout_obj_t *self) {
-    bool playing = audio_dma_get_playing(&self->dma);
+    bool playing = audio_dma_is_active(&self->dma);
 
     if (!playing && self->pacing_timer < NUM_DMA_TIMERS) {
         common_hal_audiopwmio_pwmaudioout_stop(self);
