@@ -56,20 +56,16 @@ void common_hal_analogbufio_bufferedin_construct(analogbufio_bufferedin_obj_t *s
     float clk_div = (float)ADC_CLOCK_INPUT / (float)sample_rate;
     adc_set_clkdiv(clk_div);
 
-    // Set up the DMA to start transferring data as soon as it appears in FIFO
-    uint dma_chan = dma_claim_unused_channel(true);
-    self->dma_chan = dma_chan;
-
-    // Set Config
-    self->cfg = dma_channel_get_default_config(dma_chan);
-
-    // Reading from constant address, writing to incrementing byte addresses
-    channel_config_set_read_increment(&(self->cfg), false);
-    channel_config_set_write_increment(&(self->cfg), true);
-
-    // Pace transfers based on availability of ADC samples
-    channel_config_set_dreq(&(self->cfg), DREQ_ADC);
-
+    for (size_t i = 0; i < 2; i++) {
+        self->dma_chan[i] = dma_claim_unused_channel(true);
+        self->cfg[i] = dma_channel_get_default_config(self->dma_chan[i]);
+        // Reading from constant address, writing to incrementing byte addresses
+        channel_config_set_read_increment(&(self->cfg[i]), false);
+        channel_config_set_write_increment(&(self->cfg[i]), true);
+        // Pace transfers based on availability of ADC samples
+        channel_config_set_dreq(&(self->cfg[i]), DREQ_ADC);
+        channel_config_set_chain_to(&(self->cfg[i]), self->dma_chan[1 - i]);
+    }
     // clear any previous activity
     adc_fifo_drain();
     adc_run(false);
@@ -84,12 +80,17 @@ void common_hal_analogbufio_bufferedin_deinit(analogbufio_bufferedin_obj_t *self
         return;
     }
 
-    // Release ADC Pin
+    // stop DMA
+    dma_channel_abort(self->dma_chan[0]);
+    dma_channel_abort(self->dma_chan[1]);
+
+    // Release ADC pin
     reset_pin_number(self->pin->number);
     self->pin = NULL;
 
-    // Release DMA Channel
-    dma_channel_unclaim(self->dma_chan);
+    // Release DMA channels
+    dma_channel_unclaim(self->dma_chan[0]);
+    dma_channel_unclaim(self->dma_chan[1]);
 }
 
 uint32_t common_hal_analogbufio_bufferedin_readinto(analogbufio_bufferedin_obj_t *self, uint8_t *buffer, uint32_t len, uint8_t bytes_per_sample) {
@@ -118,17 +119,31 @@ uint32_t common_hal_analogbufio_bufferedin_readinto(analogbufio_bufferedin_obj_t
 
     uint32_t sample_count = len / bytes_per_sample;
 
-    channel_config_set_transfer_data_size(&(self->cfg), dma_size);
+    channel_config_set_transfer_data_size(&(self->cfg[0]), dma_size);
+    channel_config_set_transfer_data_size(&(self->cfg[1]), dma_size);
 
-    dma_channel_configure(self->dma_chan, &(self->cfg),
-        buffer,   // dst
-        &adc_hw->fifo,  // src
-        sample_count,   // transfer count
-        true            // start immediately
+    dma_channel_configure(self->dma_chan[1], &(self->cfg[1]),
+        buffer,       // dst
+        &adc_hw->fifo,      // src
+        sample_count,       // transfer count
+        false                // don't start yet
+        );
+
+    dma_channel_configure(self->dma_chan[0], &(self->cfg[0]),
+        buffer,       // dst
+        &adc_hw->fifo,      // src
+        sample_count,       // transfer count
+        true                // start immediately
         );
 
     // Start the ADC
     adc_run(true);
+
+    return 0;
+}
+
+
+/*
 
     // Once DMA finishes, stop any new conversions from starting, and clean up
     // the FIFO in case the ADC was still mid-conversion.
@@ -163,3 +178,4 @@ uint32_t common_hal_analogbufio_bufferedin_readinto(analogbufio_bufferedin_obj_t
     }
     return captured_count;
 }
+*/
