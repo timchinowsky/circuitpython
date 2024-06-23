@@ -6,6 +6,6 @@ LOCAL_IMAGE=$REMOTE_IMAGE
 
 make fetch-all-submodules
 
-docker pull $REMOTE_IMAGE
+# docker pull $REMOTE_IMAGE
 
-docker run --user $UID:$(id -g) -it -v .:/circuitpython $LOCAL_IMAGE /tools/build.sh "$@"
+docker run --user $UID:$(id -g) -it -v $PWD:$PWD -e CP_DIR=$PWD $LOCAL_IMAGE /tools/build.sh "$@"

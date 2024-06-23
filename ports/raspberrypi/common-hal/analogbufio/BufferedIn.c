@@ -58,6 +58,8 @@ void common_hal_analogbufio_bufferedin_construct(analogbufio_bufferedin_obj_t *s
 
     for (size_t i = 0; i < 2; i++) {
         self->dma_chan[i] = dma_claim_unused_channel(true);
+    }
+    for (size_t i = 0; i < 2; i++) {
         self->cfg[i] = dma_channel_get_default_config(self->dma_chan[i]);
         // Reading from constant address, writing to incrementing byte addresses
         channel_config_set_read_increment(&(self->cfg[i]), false);
