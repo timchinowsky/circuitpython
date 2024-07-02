@@ -17,6 +17,8 @@ typedef struct {
     mp_obj_base_t base;
     const mcu_pin_obj_t *pin;
     uint8_t chan;
-    uint dma_chan[2];
-    dma_channel_config cfg[2];
+    uint dma_chan[4];
+    dma_channel_config cfg[4];
+    uint8_t *active_buffer;
+    uint32_t inputs;
 } analogbufio_bufferedin_obj_t;

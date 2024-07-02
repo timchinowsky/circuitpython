@@ -236,6 +236,8 @@ SRC_C += \
 	mphalport.c \
 	$(SRC_CYW43) \
 	$(SRC_LWIP) \
+  SEGGER_RTT.c \
+  SEGGER_RTT_printf.c
 
 
 ifeq ($(CIRCUITPY_USB_HOST), 1)

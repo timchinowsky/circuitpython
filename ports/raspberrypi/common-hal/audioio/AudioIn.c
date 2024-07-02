@@ -83,9 +83,7 @@ static uint32_t limit_denominator(uint32_t max_denominator, uint32_t num_in, uin
 
 // Caller validates that pins are free.
 void common_hal_audiopwmio_pwmaudioout_construct(audiopwmio_pwmaudioout_obj_t *self,
-    const mcu_pin_obj_t *left_channel, const mcu_pin_obj_t *right_channel, uint16_t quiescent_value, uint16_t left_shift) {
-
-    self->left_shift = left_shift;
+    const mcu_pin_obj_t *left_channel, const mcu_pin_obj_t *right_channel, uint16_t quiescent_value) {
 
     self->stereo = left_channel != NULL && right_channel != NULL;
 
@@ -124,7 +122,7 @@ void common_hal_audiopwmio_pwmaudioout_construct(audiopwmio_pwmaudioout_obj_t *s
         mp_raise_RuntimeError(MP_ERROR_TEXT("All timers in use"));
     }
 
-    self->quiescent_value = quiescent_value >> (SAMPLE_BITS_TO_DISCARD - left_shift);
+    self->quiescent_value = quiescent_value >> SAMPLE_BITS_TO_DISCARD;
     common_hal_pwmio_pwmout_set_duty_cycle(&self->left_pwm, self->quiescent_value);
     pwmio_pwmout_set_top(&self->left_pwm, PWM_TOP);
     if (self->stereo) {
@@ -155,9 +153,6 @@ void common_hal_audiopwmio_pwmaudioout_deinit(audiopwmio_pwmaudioout_obj_t *self
 
     audio_dma_deinit(&self->dma);
 }
-
-uint32_t den;
-uint32_t num;
 
 void common_hal_audiopwmio_pwmaudioout_play(audiopwmio_pwmaudioout_obj_t *self, mp_obj_t sample, bool loop) {
 
@@ -198,9 +193,6 @@ void common_hal_audiopwmio_pwmaudioout_play(audiopwmio_pwmaudioout_obj_t *self, 
     uint32_t best_denominator;
     uint32_t best_numerator = limit_denominator(0xffff, sample_rate, system_clock, &best_denominator);
 
-    den = best_denominator;
-    num = best_numerator;
-
     dma_hw->timer[pacing_timer] = best_numerator << 16 | best_denominator;
     audio_dma_result result = audio_dma_setup_transfer(
         &self->dma,
@@ -209,7 +201,7 @@ void common_hal_audiopwmio_pwmaudioout_play(audiopwmio_pwmaudioout_obj_t *self, 
         false, // single channel
         0, // audio channel
         false,  // output signed
-        BITS_PER_SAMPLE + self->left_shift,
+        BITS_PER_SAMPLE,
         (uint32_t)tx_register,  // output register: PWM cc register
         0x3b + pacing_timer, // data request line
         self->swap_channel,

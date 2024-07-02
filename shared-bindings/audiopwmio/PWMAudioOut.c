@@ -82,11 +82,12 @@
 //|           print("stopped")"""
 //|         ...
 static mp_obj_t audiopwmio_pwmaudioout_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, const mp_obj_t *all_args) {
-    enum { ARG_left_channel, ARG_right_channel, ARG_quiescent_value };
+    enum { ARG_left_channel, ARG_right_channel, ARG_quiescent_value, ARG_left_shift };
     static const mp_arg_t allowed_args[] = {
         { MP_QSTR_left_channel, MP_ARG_OBJ | MP_ARG_REQUIRED },
         { MP_QSTR_right_channel, MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_rom_obj = mp_const_none} },
         { MP_QSTR_quiescent_value, MP_ARG_INT | MP_ARG_KW_ONLY, {.u_int = 0x8000} },
+        { MP_QSTR_left_shift, MP_ARG_INT | MP_ARG_KW_ONLY, {.u_int = 0x0000} },
     };
     mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
     mp_arg_parse_all_kw_array(n_args, n_kw, all_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
@@ -101,7 +102,7 @@ static mp_obj_t audiopwmio_pwmaudioout_make_new(const mp_obj_type_t *type, size_
     // to ensure resources are collected at interpreter shutdown.
     audiopwmio_pwmaudioout_obj_t *self = m_new_obj_with_finaliser(audiopwmio_pwmaudioout_obj_t);
     self->base.type = &audiopwmio_pwmaudioout_type;
-    common_hal_audiopwmio_pwmaudioout_construct(self, left_channel_pin, right_channel_pin, args[ARG_quiescent_value].u_int);
+    common_hal_audiopwmio_pwmaudioout_construct(self, left_channel_pin, right_channel_pin, args[ARG_quiescent_value].u_int, args[ARG_left_shift].u_int);
 
     return MP_OBJ_FROM_PTR(self);
 }

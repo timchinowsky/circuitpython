@@ -17,6 +17,11 @@
 
 #include "src/rp2_common/hardware_irq/include/hardware/irq.h"
 
+#include "src/rp2_common/hardware_timer/include/hardware/timer.h"
+
+
+#include "SEGGER_RTT.h"
+
 #if CIRCUITPY_AUDIOCORE
 
 void audio_dma_reset(void) {
@@ -33,6 +38,8 @@ void audio_dma_reset(void) {
 static size_t audio_dma_convert_samples(audio_dma_t *dma, uint8_t *input, uint32_t input_length, uint8_t *output, uint32_t output_length) {
     #pragma GCC diagnostic push
     #pragma GCC diagnostic ignored "-Wcast-align"
+
+    SEGGER_RTT_printf(0, "%d, %d, %d\r\n", timer_hw->timerawl, input_length, output_length);
 
     uint32_t output_length_used = input_length / dma->sample_spacing;
 
@@ -113,6 +120,7 @@ static size_t audio_dma_convert_samples(audio_dma_t *dma, uint8_t *input, uint32
     #pragma GCC diagnostic pop
     return output_length_used;
 }
+uint32_t *GPIO09OVERRIDE = (uint32_t *)0x4001404C;
 
 // buffer_idx is 0 or 1.
 static void audio_dma_load_next_block(audio_dma_t *dma, size_t buffer_idx) {
@@ -121,6 +129,8 @@ static void audio_dma_load_next_block(audio_dma_t *dma, size_t buffer_idx) {
     audioio_get_buffer_result_t get_buffer_result;
     uint8_t *sample_buffer;
     uint32_t sample_buffer_length;
+
+    *GPIO09OVERRIDE = 0x00003300;
     get_buffer_result = audiosample_get_buffer(dma->sample,
         dma->single_sided, dma->audio_side, &sample_buffer, &sample_buffer_length);
 
@@ -159,6 +169,8 @@ static void audio_dma_load_next_block(audio_dma_t *dma, size_t buffer_idx) {
             }
         }
     }
+    *GPIO09OVERRIDE = 0x00003200;
+
 }
 
 // Playback should be shutdown before calling this.

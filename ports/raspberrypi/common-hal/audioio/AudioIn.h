@@ -19,7 +19,6 @@ typedef struct {
     uint8_t pacing_timer;
     bool stereo;     // if false, only using left_pwm.
     bool swap_channel;
-    uint16_t left_shift;
 } audiopwmio_pwmaudioout_obj_t;
 
 void audiopwmout_background(void);
