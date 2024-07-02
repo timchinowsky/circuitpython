@@ -39,7 +39,7 @@ static size_t audio_dma_convert_samples(audio_dma_t *dma, uint8_t *input, uint32
     #pragma GCC diagnostic push
     #pragma GCC diagnostic ignored "-Wcast-align"
 
-    SEGGER_RTT_printf(0, "%d, %d, %d\r\n", timer_hw->timerawl, input_length, output_length);
+
 
     uint32_t output_length_used = input_length / dma->sample_spacing;
 
@@ -150,6 +150,8 @@ static void audio_dma_load_next_block(audio_dma_t *dma, size_t buffer_idx) {
     dma_channel_set_read_addr(dma_channel, dma->buffer[buffer_idx], false /* trigger */);
     dma_channel_set_trans_count(dma_channel, output_length_used / dma->reg_size, false /* trigger */);
 
+    SEGGER_RTT_printf(0, "%d, %d\r\n", timer_hw->timerawl, output_length_used / dma->reg_size);
+    
     if (get_buffer_result == GET_BUFFER_DONE) {
         if (dma->loop) {
             audiosample_reset_buffer(dma->sample, dma->single_sided, dma->audio_side);

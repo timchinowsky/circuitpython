@@ -68,7 +68,7 @@ void common_hal_analogbufio_bufferedin_construct(analogbufio_bufferedin_obj_t *s
     // sample rate determines divisor, not zero.
 
     // sample_rate is forced to be >= 1 in shared-bindings
-    float clk_div = (float)ADC_CLOCK_INPUT / (float)sample_rate;
+    float clk_div = (float)ADC_CLOCK_INPUT / (float)sample_rate - 1;
     adc_set_clkdiv(clk_div);
 
 
@@ -90,9 +90,9 @@ void common_hal_analogbufio_bufferedin_construct(analogbufio_bufferedin_obj_t *s
 //               0x8 -> clk_adc
 //               0x9 -> clk_rtc
 //               0xa -> clk_ref
-    clock_gpio_init(24, 3, 6 * 4800); // send clksrc_pll_usb/6*4800 to GPIO 24
-//    clock_gpio_init(24, 8, 6*4800); // send clk_adc/6*4800 to GPIO 24
-    clock_gpio_init(25, 6, 6 * 12500); // send clk_sys/6*12500 to GPIO 24
+    clock_gpio_init(24, 3, 8 * 4800); // send clksrc_pll_usb/6*4800 to GPIO 24
+//    clock_gpio_init(24, 8, 8*4800); // send clk_adc/6*4800 to GPIO 24
+    clock_gpio_init(25, 6, 8 * 12500); // send clk_sys/6*12500 to GPIO 24
 
     // Channel 0 transfers data from ADC to buffer
 
@@ -415,6 +415,7 @@ import array
 import audiocore
 import audiopwmio
 import digitalio
+import pwmio
 
 led = digitalio.DigitalInOut(board.D10)
 led.direction = digitalio.Direction.OUTPUT
@@ -422,7 +423,7 @@ led.direction = digitalio.Direction.OUTPUT
 led2 = digitalio.DigitalInOut(board.D9)
 led2.direction = digitalio.Direction.OUTPUT
 
-buffer = array.array("H", [0x0000] * 6)
+buffer = array.array("H", [0x0000] * 8)
 
 adc = analogbufio.BufferedIn(board.A0, sample_rate=10000)
 adc.readinto(buffer)
@@ -431,6 +432,8 @@ adc.readinto(buffer)
 pwm = audiopwmio.PWMAudioOut(board.D12, left_shift=4)
 sample = audiocore.RawSample(buffer, sample_rate=10000, single_buffer=False)
 pwm.play(sample)
+
+p = pwmio.PWMOut(board.D4, duty_cycle=32767, frequency = 2500)
 
 >>> sample = audiocore.RawSample(buffer, sample_rate=9999, single_buffer=False); pwm.play(sample)
 >>> adc.deinit(); adc = analogbufio.BufferedIn(board.A0, sample_rate=10000); adc.readinto(buffer)
