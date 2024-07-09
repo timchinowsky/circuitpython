@@ -17,9 +17,38 @@
 //| address space seen from the processor running CircuitPython. It is usually
 //| the physical address space.
 //| """
+
+//| def addressof(obj: object) -> int:
+//|     """Returns the address of an object's internal structure."""
+//|     ...
+//|
+
+static mp_obj_t memorymap_addressof(mp_obj_t obj) {
+    uint32_t address = (uint32_t) MP_OBJ_TO_PTR(obj);
+    return MP_OBJ_NEW_SMALL_INT(address);
+}
+
+MP_DEFINE_CONST_FUN_OBJ_1(memorymap_addressof_obj, memorymap_addressof);
+
+//| def bufferof(obj: object) -> int:
+//|     """Returns the address of object's buffer."""
+//|     ...
+//|
+
+static mp_obj_t memorymap_bufferof(mp_obj_t buffer_obj) {
+    mp_buffer_info_t bufinfo;
+    mp_get_buffer_raise(buffer_obj, &bufinfo, MP_BUFFER_READ);
+    uint32_t address = (uint32_t) bufinfo.buf;
+    return MP_OBJ_NEW_SMALL_INT(address);
+}
+
+MP_DEFINE_CONST_FUN_OBJ_1(memorymap_bufferof_obj, memorymap_bufferof);
+
 static const mp_rom_map_elem_t memorymap_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR___name__), MP_ROM_QSTR(MP_QSTR_memorymap) },
     { MP_ROM_QSTR(MP_QSTR_AddressRange),   MP_ROM_PTR(&memorymap_addressrange_type) },
+    { MP_ROM_QSTR(MP_QSTR_addressof), MP_ROM_PTR(&memorymap_addressof_obj) },
+    { MP_ROM_QSTR(MP_QSTR_bufferof), MP_ROM_PTR(&memorymap_bufferof_obj) },
 };
 
 static MP_DEFINE_CONST_DICT(memorymap_module_globals, memorymap_module_globals_table);

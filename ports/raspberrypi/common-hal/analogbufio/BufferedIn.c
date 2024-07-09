@@ -126,16 +126,16 @@ void common_hal_analogbufio_bufferedin_construct(analogbufio_bufferedin_obj_t *s
 // Channel 2 toggles a GPIO so we can time DMA
 
     self->cfg[2] = dma_channel_get_default_config(self->dma_chan[2]);
-    // Read from incrementing address
-    channel_config_set_read_increment(&(self->cfg[2]), true);
+    // Read from constant address
+    channel_config_set_read_increment(&(self->cfg[2]), false);
     // Write to constant address
     channel_config_set_write_increment(&(self->cfg[2]), false);
     // Writing to 32-bit register
     channel_config_set_transfer_data_size(&(self->cfg[2]), DMA_SIZE_32);
-    // Run as fast as possible
-    channel_config_set_dreq(&(self->cfg[2]), 0x3F);
-    // set ring to read one 32 bit value (the toggle command) over and over
-    channel_config_set_ring(&self->cfg[2], false, 2); // ring is 1<<2 = 4 bytes
+    // Trigger from ADC at first
+    channel_config_set_dreq(&(self->cfg[2]), 59); // DREQ_ADC);
+//    // set ring to read one 32 bit value (the toggle command) over and over
+//    channel_config_set_ring(&self->cfg[2], false, 2); // ring is 1<<2 = 4 bytes
     // Chain to reconfig channel
     channel_config_set_chain_to(&(self->cfg[2]), self->dma_chan[2]);
 
@@ -245,14 +245,11 @@ uint32_t common_hal_analogbufio_bufferedin_readinto(analogbufio_bufferedin_obj_t
         false                                                    // don't start yet
         );
 
-
-
     dma_channel_configure(self->dma_chan[2], &(self->cfg[2]),
-        test,
-        // &sio_hw->gpio_togl,                                      // write address
-        &gpio_toggle_mask,                                       // read address
-        1,                                                       // transfer count
-        true                                                     // start
+        test,                                                      // write address
+        test,                                                      // read address
+        0xFFFFFFFF,                                                // transfer count
+        true                                                       // start
         );
 
     dma_channel_configure(self->dma_chan[3], &(self->cfg[3]),
@@ -409,6 +406,10 @@ uint32_t common_hal_analogbufio_bufferedin_set_inputs(analogbufio_bufferedin_obj
 
 /* Test code:
 
+import array
+buffer = array.array("H", [0x1234] * 8)
+
+
 import board
 import analogbufio
 import array
@@ -423,17 +424,18 @@ led.direction = digitalio.Direction.OUTPUT
 led2 = digitalio.DigitalInOut(board.D9)
 led2.direction = digitalio.Direction.OUTPUT
 
-buffer = array.array("H", [0x0000] * 8)
+buffer = array.array("H", [0x1234] * 8)
 
 adc = analogbufio.BufferedIn(board.A0, sample_rate=10000)
 adc.readinto(buffer)
+
+p = pwmio.PWMOut(board.D4, duty_cycle=32767, frequency = 10000)
 
 # pwm = audiopwmio.PWMAudioOut(left_channel=board.D12, right_channel=board.D13, left_shift=4)
 pwm = audiopwmio.PWMAudioOut(board.D12, left_shift=4)
 sample = audiocore.RawSample(buffer, sample_rate=10000, single_buffer=False)
 pwm.play(sample)
 
-p = pwmio.PWMOut(board.D4, duty_cycle=32767, frequency = 2500)
 
 >>> sample = audiocore.RawSample(buffer, sample_rate=9999, single_buffer=False); pwm.play(sample)
 >>> adc.deinit(); adc = analogbufio.BufferedIn(board.A0, sample_rate=10000); adc.readinto(buffer)
@@ -459,14 +461,27 @@ synthio.Biquad(b0=16)
 
 
 
+import array
+import audiocore
+import audiopwmio
+import board
+import math
+
 length = 8000 // 440
 sine_wave = array.array("H", [0] * length)
 for i in range(length):
     sine_wave[i] = int(math.sin(math.pi * 2 * i / length) * (2 ** 15) + 2 ** 15)
 
-dac = audiopwmio.PWMAudioOut(board.SPEAKER)
-sine_wave = audiocore.RawSample(sine_wave, sample_rate=8000)
-dac.play(sine_wave, loop=True)
+pwm = audiopwmio.PWMAudioOut(left_channel=board.D12, right_channel=board.D13)
+sample = audiocore.RawSample(sine_wave, sample_rate=8000)
+pwm.play(sample, loop=True)
+
+for i in range(length):
+    sine_wave[i] = int(math.sin(math.pi * 4 * i / length) * (2 ** 15) + 2 ** 15)
+
+
+sample = audiocore.RawSample(sine_wave, sample_rate=8000, single_buffer=False)
+pwm.play(sample)
 
 
 // No DMA to SIO pins:  https://forums.raspberrypi.com/viewtopic.php?t=358429
@@ -510,14 +525,64 @@ dac = audiopwmio.PWMAudioOut(board.D12)
 sample = audiocore.RawSample(sine_wave, sample_rate=8000)
 dac.play(sample, loop=True)
 
+For example, if TOP is programmed to 254, the counter will have
+a period of 255 cycles, and CC values in the range of 0 to 255 inclusive will produce duty cycles in the range 0% to 100%
+inclusive.
 
+import pwmio
+import board
 
+p = pwmio.PWMOut(duty_cycle=32767, frequency=2500000)
 
+import analogbufio
+import array
+import audiocore
+import audiopwmio
+import board
 
+buffer = array.array("H", [0x0000] * 8)
+adc = analogbufio.BufferedIn(board.A0, sample_rate=10000)
+adc.readinto(buffer, loop=True)
+pwm = audiopwmio.PWMAudioOut(board.D12)
+sample = audiocore.RawSample(buffer, sample_rate=10000, single_buffer=False)
+pwm.play(sample)
 
+import analogbufio
+import array
+import audiocore
+import audiopwmio
+import board
 
+def test_sample():
+    # Generate one period of sine wave.
+    length = 8000 // 440
+    sine_wave = array.array("h", [0] * length)
+    for i in range(length):
+        sine_wave[i] = int(math.sin(math.pi * 2 * i / length) * (2 ** 15))
+    pwm = audiopwmio.PWMAudioOut(left_channel=board.D12, right_channel=board.D13)
 
+    # Play single-buffered
+    sample = audiocore.RawSample(sine_wave)
+    pwm.play(sample, loop=True)
+    time.sleep(1)
+    # changing the wave has no effect
+    for i in range(length):
+        sine_wave[i] = int(math.sin(math.pi * 4 * i / length) * (2 ** 15))
+    time.sleep(1)
+    pwm.stop()
+    time.sleep(1)
 
+    # Play double-buffered
+    sample = audiocore.RawSample(sine_wave, single_buffer=False)
+    pwm.play(sample)
+    time.sleep(1)
+    # changing the wave takes effect quickly
+    for i in range(length):
+        sine_wave[i] = int(math.sin(math.pi * 2 * i / length) * (2 ** 15))
+    time.sleep(1)
+    pwm.stop()
+    pwm.deinit()
 
+test_sample()
 
 */
