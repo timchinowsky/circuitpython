@@ -211,7 +211,7 @@ void common_hal_audiopwmio_pwmaudioout_play(audiopwmio_pwmaudioout_obj_t *self, 
         false,  // output signed
         BITS_PER_SAMPLE + self->left_shift,
         (uint32_t)tx_register,  // output register: PWM cc register
-        0x3b + pacing_timer, // data request line // 27, // PWM3 DREQ // 
+        0x3b + pacing_timer, // data request line // 27, // PWM3 DREQ //
         self->swap_channel,
         true);
 

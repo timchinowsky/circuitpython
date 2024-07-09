@@ -17,6 +17,7 @@
 //| address space seen from the processor running CircuitPython. It is usually
 //| the physical address space.
 //| """
+//|
 
 //| def addressof(obj: object) -> int:
 //|     """Returns the address of an object's internal structure."""
@@ -24,7 +25,7 @@
 //|
 
 static mp_obj_t memorymap_addressof(mp_obj_t obj) {
-    uint32_t address = (uint32_t) MP_OBJ_TO_PTR(obj);
+    uint32_t address = (uint32_t)MP_OBJ_TO_PTR(obj);
     return MP_OBJ_NEW_SMALL_INT(address);
 }
 
@@ -38,7 +39,7 @@ MP_DEFINE_CONST_FUN_OBJ_1(memorymap_addressof_obj, memorymap_addressof);
 static mp_obj_t memorymap_bufferof(mp_obj_t buffer_obj) {
     mp_buffer_info_t bufinfo;
     mp_get_buffer_raise(buffer_obj, &bufinfo, MP_BUFFER_READ);
-    uint32_t address = (uint32_t) bufinfo.buf;
+    uint32_t address = (uint32_t)bufinfo.buf;
     return MP_OBJ_NEW_SMALL_INT(address);
 }
 
