@@ -8,8 +8,10 @@
 
 #include "py/obj.h"
 #include "shared-bindings/audiocore/RawSample.h"
+#include "shared-bindings/audiocore/FunSample.h"
 #include "shared-bindings/audiocore/WaveFile.h"
 #include "shared-module/audiocore/RawSample.h"
+#include "shared-module/audiocore/FunSample.h"
 #include "shared-module/audiocore/WaveFile.h"
 
 #include "shared-bindings/audiomixer/Mixer.h"

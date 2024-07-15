@@ -30,6 +30,7 @@ SRC_BITMAP := \
 	shared-bindings/aesio/__init__.c \
 	shared-bindings/audiocore/__init__.c \
 	shared-bindings/audiocore/RawSample.c \
+	shared-bindings/audiocore/FunSample.c \
 	shared-bindings/audiocore/WaveFile.c \
 	shared-bindings/audiomixer/__init__.c \
 	shared-bindings/audiomixer/Mixer.c \
@@ -62,6 +63,7 @@ SRC_BITMAP := \
 	shared-module/aesio/__init__.c \
 	shared-module/audiocore/__init__.c \
 	shared-module/audiocore/RawSample.c \
+	shared-module/audiocore/FunSample.c \
 	shared-module/audiocore/WaveFile.c \
 	shared-module/audiomixer/__init__.c \
 	shared-module/audiomp3/MP3Decoder.c \

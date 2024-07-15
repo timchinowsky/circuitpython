@@ -612,6 +612,7 @@ SRC_SHARED_MODULE_ALL = \
 	aesio/aes.c \
 	atexit/__init__.c \
 	audiocore/RawSample.c \
+	audiocore/FunSample.c \
 	audiocore/WaveFile.c \
 	audiocore/__init__.c \
 	audioio/__init__.c \
