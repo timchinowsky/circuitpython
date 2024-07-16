@@ -16,6 +16,9 @@
 #include "cmsis_compiler.h"
 #endif
 
+#include "ports/raspberrypi/SEGGER_RTT.h"
+#include "ports/raspberrypi/sdk/src/rp2_common/hardware_timer/include/hardware/timer.h"
+
 void common_hal_audiomixer_mixer_construct(audiomixer_mixer_obj_t *self,
     uint8_t voice_count,
     uint32_t buffer_size,
@@ -191,6 +194,7 @@ static void mix_down_one_voice(audiomixer_mixer_obj_t *self,
         uint32_t n = MIN(voice->buffer_length, length);
         uint32_t *src = voice->remaining_buffer;
         uint16_t level = voice->level;
+        SEGGER_RTT_printf(0, "%d,,%d\r\n", timer_hw->timerawl, n);
 
         // First active voice gets copied over verbatim.
         if (!voices_active) {
@@ -265,6 +269,9 @@ audioio_get_buffer_result_t audiomixer_mixer_get_buffer(audiomixer_mixer_obj_t *
     uint8_t channel,
     uint8_t **buffer,
     uint32_t *buffer_length) {
+
+    SEGGER_RTT_printf(0, "%d\r\n", timer_hw->timerawl);
+
     if (!single_channel_output) {
         channel = 0;
     }
@@ -292,6 +299,7 @@ audioio_get_buffer_result_t audiomixer_mixer_get_buffer(audiomixer_mixer_obj_t *
         for (int32_t v = 0; v < self->voice_count; v++) {
             audiomixer_mixervoice_obj_t *voice = MP_OBJ_TO_PTR(self->voice[v]);
             if (voice->sample) {
+                SEGGER_RTT_printf(0, "%d, %d\r\n", timer_hw->timerawl, v);
                 mix_down_one_voice(self, voice, voices_active, word_buffer, length);
                 voices_active = true;
             }
