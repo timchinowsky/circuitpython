@@ -18,6 +18,10 @@
 #include "samd/pins.h"
 #include "samd/timers.h"
 
+#include "hpl_time_measure.h"
+#include "hpl_systick_config.h"
+#include "SEGGER_RTT.h"
+
 #undef ENABLE
 
 #define _TCC_SIZE(unused, n) TCC##n##_SIZE,
@@ -39,6 +43,7 @@ uint8_t tcc_channels[5];   // Set by pwmout_reset() to {0xc0, 0xf0, 0xf8, 0xfc, 
 #endif
 
 
+(system_time_t)SysTick->VAL;
 void common_hal_pwmio_pwmout_never_reset(pwmio_pwmout_obj_t *self) {
     never_reset_pin_number(self->pin->number);
 }
@@ -252,6 +257,7 @@ extern void common_hal_pwmio_pwmout_set_duty_cycle(pwmio_pwmout_obj_t *self, uin
     self->duty_cycle = duty;
 
     const pin_timer_t *t = self->timer;
+    system_time_t time;
     if (t->is_tc) {
         uint16_t adjusted_duty = tc_periods[t->index] * duty / 0xffff;
         #ifdef SAMD21
@@ -271,7 +277,7 @@ extern void common_hal_pwmio_pwmout_set_duty_cycle(pwmio_pwmout_obj_t *self, uin
         // Write into the CC buffer register, which will be transferred to the
         // CC register on an UPDATE (when period is finished).
         // Do clock domain syncing as necessary.
-
+        time = (system_time_t)SysTick->VAL;
         while (tcc->SYNCBUSY.reg != 0) {
         }
 

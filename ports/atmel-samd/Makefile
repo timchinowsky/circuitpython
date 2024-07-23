@@ -285,6 +285,8 @@ SRC_C += \
 	mphalport.c \
 	reset.c \
 	timer_handler.c \
+	SEGGER_RTT.c \
+	SEGGER_RTT_printf.c \
 	$(SRC_PERIPHERALS) \
 
 $(BUILD)/lib/tlsf/tlsf.o: CFLAGS += -Wno-cast-align
