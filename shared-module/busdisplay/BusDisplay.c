@@ -32,6 +32,8 @@
 
 #define DELAY 0x80
 
+uint32_t pwm_j;
+
 void common_hal_busdisplay_busdisplay_construct(busdisplay_busdisplay_obj_t *self,
     mp_obj_t bus, uint16_t width, uint16_t height, int16_t colstart, int16_t rowstart,
     uint16_t rotation, uint16_t color_depth, bool grayscale, bool pixels_in_byte_share_row,
@@ -118,7 +120,12 @@ void common_hal_busdisplay_busdisplay_construct(busdisplay_busdisplay_obj_t *sel
         #endif
     }
 
-    common_hal_busdisplay_busdisplay_set_brightness(self, brightness);
+    //for (pwm_j=0; pwm_j<1; pwm_j++) {
+        common_hal_time_delay_ms(3);
+        common_hal_busdisplay_busdisplay_set_brightness(self, brightness);
+
+    //}
+
 
     // Set the group after initialization otherwise we may send pixels while we delay in
     // initialization.
@@ -131,6 +138,7 @@ void common_hal_busdisplay_busdisplay_construct(busdisplay_busdisplay_obj_t *sel
 uint16_t common_hal_busdisplay_busdisplay_get_width(busdisplay_busdisplay_obj_t *self) {
     return displayio_display_core_get_width(&self->core);
 }
+
 
 uint16_t common_hal_busdisplay_busdisplay_get_height(busdisplay_busdisplay_obj_t *self) {
     return displayio_display_core_get_height(&self->core);
@@ -152,8 +160,11 @@ bool common_hal_busdisplay_busdisplay_set_brightness(busdisplay_busdisplay_obj_t
     #else
     bool ispwm = false;
     #endif
-
+    
+    common_hal_pwmio_pwmout_set_duty_cycle(&self->backlight_pwm, (uint16_t)(0xffff * brightness));
+    
     if (ispwm) {
+
         #if (CIRCUITPY_PWMIO)
         common_hal_pwmio_pwmout_set_duty_cycle(&self->backlight_pwm, (uint16_t)(0xffff * brightness));
         ok = true;

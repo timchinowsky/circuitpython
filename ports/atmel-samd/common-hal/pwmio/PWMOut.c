@@ -42,8 +42,6 @@ uint8_t tcc_channels[3];   // Set by pwmout_reset() to {0xf0, 0xfc, 0xfc} initia
 uint8_t tcc_channels[5];   // Set by pwmout_reset() to {0xc0, 0xf0, 0xf8, 0xfc, 0xfc} initially.
 #endif
 
-
-(system_time_t)SysTick->VAL;
 void common_hal_pwmio_pwmout_never_reset(pwmio_pwmout_obj_t *self) {
     never_reset_pin_number(self->pin->number);
 }
@@ -206,6 +204,7 @@ pwmout_result_t common_hal_pwmio_pwmout_construct(pwmio_pwmout_obj_t *self,
                 tcc_channels[timer->index] |= (1 << tcc_channel(timer));
             }
         }
+
     }
 
     self->timer = timer;
@@ -213,7 +212,11 @@ pwmout_result_t common_hal_pwmio_pwmout_construct(pwmio_pwmout_obj_t *self,
 
     gpio_set_pin_function(pin->number, GPIO_PIN_FUNCTION_E + mux_position);
 
+    SysTick->LOAD = 0xFFFFFF;
+    SysTick->CTRL = 0x0005;
+
     common_hal_pwmio_pwmout_set_duty_cycle(self, duty);
+
     return PWMOUT_OK;
 }
 
@@ -248,6 +251,13 @@ void common_hal_pwmio_pwmout_deinit(pwmio_pwmout_obj_t *self) {
     self->pin = NULL;
 }
 
+volatile system_time_t pwm_time;
+volatile system_time_t pwm_time_last;
+volatile system_time_t pwm_elapsed;
+volatile uint32_t pwm_adjusted_duty;
+volatile uint32_t pwm_writes = 0;
+
+/*
 extern void common_hal_pwmio_pwmout_set_duty_cycle(pwmio_pwmout_obj_t *self, uint16_t duty) {
     // Store the unadjusted duty cycle. It turns out the the process of adjusting and calculating
     // the duty cycle here and reading it back is lossy - the value will decay over time.
@@ -257,7 +267,7 @@ extern void common_hal_pwmio_pwmout_set_duty_cycle(pwmio_pwmout_obj_t *self, uin
     self->duty_cycle = duty;
 
     const pin_timer_t *t = self->timer;
-    system_time_t time;
+    
     if (t->is_tc) {
         uint16_t adjusted_duty = tc_periods[t->index] * duty / 0xffff;
         #ifdef SAMD21
@@ -277,7 +287,14 @@ extern void common_hal_pwmio_pwmout_set_duty_cycle(pwmio_pwmout_obj_t *self, uin
         // Write into the CC buffer register, which will be transferred to the
         // CC register on an UPDATE (when period is finished).
         // Do clock domain syncing as necessary.
-        time = (system_time_t)SysTick->VAL;
+        pwm_time = (system_time_t)SysTick->VAL;
+        pwm_elapsed = pwm_time_last - pwm_time;
+        pwm_time_last = pwm_time;
+        pwm_adjusted_duty = adjusted_duty;
+        pwm_writes = 20000-pwm_writes;
+
+        //SEGGER_RTT_printf(0, "%d, %d\r\n", pwm_time, adjusted_duty);
+
         while (tcc->SYNCBUSY.reg != 0) {
         }
 
@@ -292,6 +309,55 @@ extern void common_hal_pwmio_pwmout_set_duty_cycle(pwmio_pwmout_obj_t *self, uin
         tcc->CTRLBCLR.bit.LUPD = 1;
     }
 }
+*/  
+
+
+extern void common_hal_pwmio_pwmout_set_duty_cycle(pwmio_pwmout_obj_t *self, uint16_t duty) {
+    // Store the unadjusted duty cycle. It turns out the the process of adjusting and calculating
+    // the duty cycle here and reading it back is lossy - the value will decay over time.
+    // Track it here so that if frequency is changed we can use this value to recalculate the
+    // proper duty cycle.
+    // See https://github.com/adafruit/circuitpython/issues/2086 for more details
+
+    self->duty_cycle = duty;
+    const pin_timer_t *t = self->timer;
+    if (t->is_tc) {
+        uint16_t adjusted_duty = tc_periods[t->index] * duty / 0xffff;
+        if (adjusted_duty == 0 && duty != 0) {
+            adjusted_duty = 1; // prevent rounding down to 0
+        }
+        #ifdef SAMD21
+        tc_insts[t->index]->COUNT16.CC[t->wave_output].reg = adjusted_duty;
+        #endif
+        #ifdef SAM_D5X_E5X
+        Tc *tc = tc_insts[t->index];
+        tc->COUNT16.CCBUF[1].reg = adjusted_duty;
+        #endif
+    } else {
+        uint32_t adjusted_duty = ((uint64_t)tcc_periods[t->index]) * duty / 0xffff;
+        if (adjusted_duty == 0 && duty != 0) {
+            adjusted_duty = 1; // prevent rounding down to 0
+        }
+        uint8_t channel = tcc_channel(t);
+        Tcc *tcc = tcc_insts[t->index];
+
+        pwm_time = (system_time_t)SysTick->VAL;
+        pwm_elapsed = pwm_time_last - pwm_time;
+        pwm_time_last = pwm_time;
+        pwm_adjusted_duty = adjusted_duty;
+        pwm_writes = 20000-pwm_writes;
+
+        #ifdef SAMD21
+        tcc->CCB[channel].reg = adjusted_duty;
+        #endif
+        #ifdef SAM_D5X_E5X
+        tcc->CTRLBCLR.bit.LUPD = 1;
+        tcc->STATUS.vec.CCBUFV ^= (1 << channel);
+        tcc->CCBUF[channel].reg = adjusted_duty;
+        #endif
+    }
+}
+
 
 uint16_t common_hal_pwmio_pwmout_get_duty_cycle(pwmio_pwmout_obj_t *self) {
     const pin_timer_t *t = self->timer;
