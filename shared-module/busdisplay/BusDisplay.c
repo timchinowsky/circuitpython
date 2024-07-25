@@ -120,11 +120,11 @@ void common_hal_busdisplay_busdisplay_construct(busdisplay_busdisplay_obj_t *sel
         #endif
     }
 
-    //for (pwm_j=0; pwm_j<1; pwm_j++) {
-        common_hal_time_delay_ms(3);
-        common_hal_busdisplay_busdisplay_set_brightness(self, brightness);
+    // for (pwm_j=0; pwm_j<1; pwm_j++) {
+    common_hal_time_delay_ms(3);
+    common_hal_busdisplay_busdisplay_set_brightness(self, brightness);
 
-    //}
+    // }
 
 
     // Set the group after initialization otherwise we may send pixels while we delay in
@@ -160,9 +160,9 @@ bool common_hal_busdisplay_busdisplay_set_brightness(busdisplay_busdisplay_obj_t
     #else
     bool ispwm = false;
     #endif
-    
+
     common_hal_pwmio_pwmout_set_duty_cycle(&self->backlight_pwm, (uint16_t)(0xffff * brightness));
-    
+
     if (ispwm) {
 
         #if (CIRCUITPY_PWMIO)

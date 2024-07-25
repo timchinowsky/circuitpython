@@ -267,7 +267,7 @@ extern void common_hal_pwmio_pwmout_set_duty_cycle(pwmio_pwmout_obj_t *self, uin
     self->duty_cycle = duty;
 
     const pin_timer_t *t = self->timer;
-    
+
     if (t->is_tc) {
         uint16_t adjusted_duty = tc_periods[t->index] * duty / 0xffff;
         #ifdef SAMD21
@@ -309,7 +309,7 @@ extern void common_hal_pwmio_pwmout_set_duty_cycle(pwmio_pwmout_obj_t *self, uin
         tcc->CTRLBCLR.bit.LUPD = 1;
     }
 }
-*/  
+*/
 
 
 extern void common_hal_pwmio_pwmout_set_duty_cycle(pwmio_pwmout_obj_t *self, uint16_t duty) {
@@ -345,7 +345,7 @@ extern void common_hal_pwmio_pwmout_set_duty_cycle(pwmio_pwmout_obj_t *self, uin
         pwm_elapsed = pwm_time_last - pwm_time;
         pwm_time_last = pwm_time;
         pwm_adjusted_duty = adjusted_duty;
-        pwm_writes = 20000-pwm_writes;
+        pwm_writes = 20000 - pwm_writes;
 
         #ifdef SAMD21
         tcc->CCB[channel].reg = adjusted_duty;
