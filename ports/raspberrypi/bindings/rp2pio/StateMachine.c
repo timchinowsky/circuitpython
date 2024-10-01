@@ -535,10 +535,10 @@ MP_DEFINE_CONST_FUN_OBJ_KW(rp2pio_statemachine_write_obj, 2, rp2pio_statemachine
 //|         """
 //|         ...
 
-static void fill_buf_info_write(sm_buf_info *info, mp_obj_t obj, size_t *stride_in_bytes) {
+static void fill_buf_info(sm_buf_info *info, mp_obj_t obj, size_t *stride_in_bytes, mp_uint_t direction) {
     if (obj != mp_const_none) {
         info->obj = obj;
-        mp_get_buffer_raise(obj, &info->info, MP_BUFFER_READ);
+        mp_get_buffer_raise(obj, &info->info, direction);
         size_t stride = mp_binary_get_size('@', info->info.typecode, NULL);
         if (stride > 4) {
             mp_raise_ValueError(MP_ERROR_TEXT("Buffer elements must be 4 bytes long or less"));
@@ -553,10 +553,11 @@ static void fill_buf_info_write(sm_buf_info *info, mp_obj_t obj, size_t *stride_
 }
 
 static mp_obj_t rp2pio_statemachine_background_write(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
-    enum { ARG_once, ARG_loop, ARG_swap };
+    enum { ARG_once, ARG_loop, ARG_loop2, ARG_swap };
     static const mp_arg_t allowed_args[] = {
         { MP_QSTR_once,     MP_ARG_OBJ, {.u_obj = mp_const_none} },
         { MP_QSTR_loop,     MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_obj = mp_const_none} },
+        { MP_QSTR_loop2,     MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_obj = mp_const_none} },
         { MP_QSTR_swap,   MP_ARG_KW_ONLY | MP_ARG_BOOL, {.u_bool = false} },
     };
     rp2pio_statemachine_obj_t *self = MP_OBJ_TO_PTR(pos_args[0]);
@@ -566,14 +567,17 @@ static mp_obj_t rp2pio_statemachine_background_write(size_t n_args, const mp_obj
 
     sm_buf_info once_info;
     sm_buf_info loop_info;
+    sm_buf_info loop2_info;
     size_t stride_in_bytes = 0;
-    fill_buf_info_write(&once_info, args[ARG_once].u_obj, &stride_in_bytes);
-    fill_buf_info_write(&loop_info, args[ARG_loop].u_obj, &stride_in_bytes);
+    fill_buf_info(&once_info, args[ARG_once].u_obj, &stride_in_bytes, MP_BUFFER_READ);
+    fill_buf_info(&loop_info, args[ARG_loop].u_obj, &stride_in_bytes, MP_BUFFER_READ);
+    fill_buf_info(&loop2_info, args[ARG_loop2].u_obj, &stride_in_bytes, MP_BUFFER_READ);
     if (!stride_in_bytes) {
         return mp_const_none;
     }
 
-    bool ok = common_hal_rp2pio_statemachine_background_write(self, &once_info, &loop_info, stride_in_bytes, args[ARG_swap].u_bool);
+    bool ok = common_hal_rp2pio_statemachine_background_write(self, &once_info, &loop_info, &loop2_info,
+        stride_in_bytes, args[ARG_swap].u_bool);
 
     if (mp_hal_is_interrupted()) {
         return mp_const_none;
@@ -611,32 +615,27 @@ static mp_obj_t rp2pio_statemachine_obj_get_writing(mp_obj_t self_in) {
 }
 MP_DEFINE_CONST_FUN_OBJ_1(rp2pio_statemachine_get_writing_obj, rp2pio_statemachine_obj_get_writing);
 
-const mp_obj_property_t rp2pio_statemachine_writing_obj = {
-    .base.type = &mp_type_property,
-    .proxy = {(mp_obj_t)&rp2pio_statemachine_get_writing_obj,
-              MP_ROM_NONE,
-              MP_ROM_NONE},
-};
+MP_PROPERTY_GETTER(rp2pio_statemachine_writing_obj,
+    (mp_obj_t)&rp2pio_statemachine_get_writing_obj);
 
 
-
-//|     pending: int
 //|     pending_write: int
+//|     pending: int
 //|     """Returns the number of pending buffers for background writing.
 //|
-//|     If the number is 0, then a `StateMachine.background_write` call will not block."""
+//|     If the number is 0, then a `StateMachine.background_write` call will not block.
+//|     Note that `pending` is a deprecated alias for `pending_write` and will be removed
+//|     in a future version of CircuitPython."""
+
+
 static mp_obj_t rp2pio_statemachine_obj_get_pending_write(mp_obj_t self_in) {
     rp2pio_statemachine_obj_t *self = MP_OBJ_TO_PTR(self_in);
     return mp_obj_new_int(common_hal_rp2pio_statemachine_get_pending_write(self));
 }
 MP_DEFINE_CONST_FUN_OBJ_1(rp2pio_statemachine_get_pending_write_obj, rp2pio_statemachine_obj_get_pending_write);
 
-const mp_obj_property_t rp2pio_statemachine_pending_write_obj = {
-    .base.type = &mp_type_property,
-    .proxy = {(mp_obj_t)&rp2pio_statemachine_get_pending_write_obj,
-              MP_ROM_NONE,
-              MP_ROM_NONE},
-};
+MP_PROPERTY_GETTER(rp2pio_statemachine_pending_write_obj,
+    (mp_obj_t)&rp2pio_statemachine_get_pending_write_obj);
 
 
 // =================================================================================================================================
@@ -677,28 +676,13 @@ const mp_obj_property_t rp2pio_statemachine_pending_write_obj = {
 //|         """
 //|         ...
 
-static void fill_buf_info_read(sm_buf_info *info, mp_obj_t obj, size_t *stride_in_bytes) {
-    if (obj != mp_const_none) {
-        info->obj = obj;
-        mp_get_buffer_raise(obj, &info->info, MP_BUFFER_WRITE);
-        size_t stride = mp_binary_get_size('@', info->info.typecode, NULL);
-        if (stride > 4) {
-            mp_raise_ValueError(MP_ERROR_TEXT("Buffer elements must be 4 bytes long or less"));
-        }
-        if (*stride_in_bytes && stride != *stride_in_bytes) {
-            mp_raise_ValueError(MP_ERROR_TEXT("Mismatched data size"));
-        }
-        *stride_in_bytes = stride;
-    } else {
-        memset(info, 0, sizeof(*info));
-    }
-}
 
 static mp_obj_t rp2pio_statemachine_background_read(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
-    enum { ARG_once, ARG_loop, ARG_swap };
+    enum { ARG_once, ARG_loop, ARG_loop2, ARG_swap };
     static const mp_arg_t allowed_args[] = {
         { MP_QSTR_once,     MP_ARG_OBJ, {.u_obj = mp_const_none} },
         { MP_QSTR_loop,     MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_obj = mp_const_none} },
+        { MP_QSTR_loop2,     MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_obj = mp_const_none} },
         { MP_QSTR_swap,   MP_ARG_KW_ONLY | MP_ARG_BOOL, {.u_bool = false} },
     };
     rp2pio_statemachine_obj_t *self = MP_OBJ_TO_PTR(pos_args[0]);
@@ -708,14 +692,17 @@ static mp_obj_t rp2pio_statemachine_background_read(size_t n_args, const mp_obj_
 
     sm_buf_info once_read_info;
     sm_buf_info loop_read_info;
+    sm_buf_info loop2_read_info;
     size_t stride_in_bytes = 0;
-    fill_buf_info_read(&once_read_info, args[ARG_once].u_obj, &stride_in_bytes);
-    fill_buf_info_read(&loop_read_info, args[ARG_loop].u_obj, &stride_in_bytes);
+    fill_buf_info(&once_read_info, args[ARG_once].u_obj, &stride_in_bytes, MP_BUFFER_WRITE);
+    fill_buf_info(&loop_read_info, args[ARG_loop].u_obj, &stride_in_bytes, MP_BUFFER_WRITE);
+    fill_buf_info(&loop2_read_info, args[ARG_loop].u_obj, &stride_in_bytes, MP_BUFFER_WRITE);
     if (!stride_in_bytes) {
         return mp_const_none;
     }
 
-    bool ok = common_hal_rp2pio_statemachine_background_read(self, &once_read_info, &loop_read_info, stride_in_bytes, args[ARG_swap].u_bool);
+    bool ok = common_hal_rp2pio_statemachine_background_read(self, &once_read_info, &loop_read_info, &loop2_read_info,
+        stride_in_bytes, args[ARG_swap].u_bool);
 
     if (mp_hal_is_interrupted()) {
         return mp_const_none;
@@ -752,12 +739,8 @@ static mp_obj_t rp2pio_statemachine_obj_get_reading(mp_obj_t self_in) {
 }
 MP_DEFINE_CONST_FUN_OBJ_1(rp2pio_statemachine_get_reading_obj, rp2pio_statemachine_obj_get_reading);
 
-const mp_obj_property_t rp2pio_statemachine_reading_obj = {
-    .base.type = &mp_type_property,
-    .proxy = {(mp_obj_t)&rp2pio_statemachine_get_reading_obj,
-              MP_ROM_NONE,
-              MP_ROM_NONE},
-};
+MP_PROPERTY_GETTER(rp2pio_statemachine_reading_obj,
+    (mp_obj_t)&rp2pio_statemachine_get_reading_obj);
 
 //|     pending_read: int
 //|     """Returns the number of pending buffers for background reading.
@@ -769,12 +752,8 @@ static mp_obj_t rp2pio_statemachine_obj_get_pending_read(mp_obj_t self_in) {
 }
 MP_DEFINE_CONST_FUN_OBJ_1(rp2pio_statemachine_get_pending_read_obj, rp2pio_statemachine_obj_get_pending_read);
 
-const mp_obj_property_t rp2pio_statemachine_pending_read_obj = {
-    .base.type = &mp_type_property,
-    .proxy = {(mp_obj_t)&rp2pio_statemachine_get_pending_read_obj,
-              MP_ROM_NONE,
-              MP_ROM_NONE},
-};
+MP_PROPERTY_GETTER(rp2pio_statemachine_pending_read_obj,
+    (mp_obj_t)&rp2pio_statemachine_get_pending_read_obj);
 
 
 // =================================================================================================================================
@@ -991,13 +970,8 @@ static mp_obj_t rp2pio_statemachine_obj_get_txstall(mp_obj_t self_in) {
 }
 MP_DEFINE_CONST_FUN_OBJ_1(rp2pio_statemachine_get_txstall_obj, rp2pio_statemachine_obj_get_txstall);
 
-const mp_obj_property_t rp2pio_statemachine_txstall_obj = {
-    .base.type = &mp_type_property,
-    .proxy = {(mp_obj_t)&rp2pio_statemachine_get_txstall_obj,
-              MP_ROM_NONE,
-              MP_ROM_NONE},
-};
-
+MP_PROPERTY_GETTER(rp2pio_statemachine_txstall_obj,
+    (mp_obj_t)&rp2pio_statemachine_get_txstall_obj);
 
 //|     rxstall: bool
 //|     """True when the state machine has stalled due to a full RX FIFO since the last
@@ -1081,6 +1055,45 @@ MP_DEFINE_CONST_FUN_OBJ_1(rp2pio_statemachine_get_rxfifo_obj, rp2pio_statemachin
 MP_PROPERTY_GETTER(rp2pio_statemachine_rxfifo_obj,
     (mp_obj_t)&rp2pio_statemachine_get_rxfifo_obj);
 
+//|     last_read: array
+//|     """Returns the buffer most recently filled by background reads.
+//|
+//|     This property is self-clearing -- once read, subsequent reads
+//|     will return a zero-length buffer until the background read buffer
+//|     changes or restarts.
+//|
+//|     """
+static mp_obj_t rp2pio_statemachine_obj_get_last_read(mp_obj_t self_in) {
+    rp2pio_statemachine_obj_t *self = MP_OBJ_TO_PTR(self_in);
+    check_for_deinit(self);
+    return common_hal_rp2pio_statemachine_get_last_read(self);
+}
+MP_DEFINE_CONST_FUN_OBJ_1(rp2pio_statemachine_get_last_read_obj, rp2pio_statemachine_obj_get_last_read);
+
+MP_PROPERTY_GETTER(rp2pio_statemachine_last_read_obj,
+    (mp_obj_t)&rp2pio_statemachine_get_last_read_obj);
+
+
+//|     last_write: array
+//|     """Returns the buffer most recently emptied by background writes.
+//|
+//|     This property is self-clearing -- once read, subsequent reads
+//|     will return a zero-length buffer until the background write buffer
+//|     changes or restarts.
+//|
+//|     """
+//|
+static mp_obj_t rp2pio_statemachine_obj_get_last_write(mp_obj_t self_in) {
+    rp2pio_statemachine_obj_t *self = MP_OBJ_TO_PTR(self_in);
+    check_for_deinit(self);
+    return common_hal_rp2pio_statemachine_get_last_write(self);
+}
+MP_DEFINE_CONST_FUN_OBJ_1(rp2pio_statemachine_get_last_write_obj, rp2pio_statemachine_obj_get_last_write);
+
+MP_PROPERTY_GETTER(rp2pio_statemachine_last_write_obj,
+    (mp_obj_t)&rp2pio_statemachine_get_last_write_obj);
+
+
 
 static const mp_rom_map_elem_t rp2pio_statemachine_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_deinit), MP_ROM_PTR(&rp2pio_statemachine_deinit_obj) },
@@ -1117,6 +1130,10 @@ static const mp_rom_map_elem_t rp2pio_statemachine_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_pc), MP_ROM_PTR(&rp2pio_statemachine_pc_obj) },
 
     { MP_ROM_QSTR(MP_QSTR_rxfifo), MP_ROM_PTR(&rp2pio_statemachine_rxfifo_obj) },
+
+    { MP_ROM_QSTR(MP_QSTR_last_read), MP_ROM_PTR(&rp2pio_statemachine_last_read_obj) },
+    { MP_ROM_QSTR(MP_QSTR_last_write), MP_ROM_PTR(&rp2pio_statemachine_last_write_obj) },
+
 };
 static MP_DEFINE_CONST_DICT(rp2pio_statemachine_locals_dict, rp2pio_statemachine_locals_dict_table);
 

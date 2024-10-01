@@ -49,8 +49,8 @@ typedef struct {
     // dma-related items
     volatile int pending_buffers_write;
     volatile int pending_buffers_read;
-    sm_buf_info current_write, once_write, loop_write;
-    sm_buf_info current_read, once_read, loop_read;
+    sm_buf_info current_write_buf, once_write_buf, loop_write_buf;
+    sm_buf_info current_read_buf, once_read_buf, loop_read_buf;
     int background_stride_in_bytes;
     bool dma_completed_write, byteswap;
     bool dma_completed_read;

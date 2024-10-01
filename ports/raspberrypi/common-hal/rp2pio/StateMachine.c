@@ -1047,13 +1047,16 @@ uint8_t rp2pio_statemachine_program_offset(rp2pio_statemachine_obj_t *self) {
     return _current_program_offset[pio_index][sm];
 }
 
-bool common_hal_rp2pio_statemachine_background_write(rp2pio_statemachine_obj_t *self, const sm_buf_info *once_write, const sm_buf_info *loop_write, uint8_t stride_in_bytes, bool swap) {
+bool common_hal_rp2pio_statemachine_background_write(rp2pio_statemachine_obj_t *self,
+    const sm_buf_info *once_write_buf, const sm_buf_info *loop_write_buf, const sm_buf_info *write_loop2_buf,
+    uint8_t stride_in_bytes, bool swap) {
+
     uint8_t pio_index = pio_get_index(self->pio);
     uint8_t sm = self->state_machine;
 
-    int pending_buffers_write = (once_write->info.len != 0) + (loop_write->info.len != 0);
-    if (!once_write->info.len) {
-        once_write = loop_write;
+    int pending_buffers_write = (once_write_buf->info.len != 0) + (loop_write_buf->info.len != 0);
+    if (!once_write_buf->info.len) {
+        once_write_buf = loop_write_buf;
     }
 
     if (SM_DMA_ALLOCATED_WRITE(pio_index, sm)) {
@@ -1072,11 +1075,11 @@ bool common_hal_rp2pio_statemachine_background_write(rp2pio_statemachine_obj_t *
         }
 
         common_hal_mcu_disable_interrupts();
-        self->once_write = *once_write;
-        self->loop_write = *loop_write;
+        self->once_write_buf = *once_write_buf;
+        self->loop_write_buf = *loop_write_buf;
         self->pending_buffers_write = pending_buffers_write;
 
-        if (self->dma_completed_write && self->once_write.info.len) {
+        if (self->dma_completed_write && self->once_write_buf.info.len) {
             rp2pio_statemachine_dma_complete_write(self, SM_DMA_GET_CHANNEL_WRITE(pio_index, sm));
             self->dma_completed_write = false;
         }
@@ -1099,9 +1102,9 @@ bool common_hal_rp2pio_statemachine_background_write(rp2pio_statemachine_obj_t *
 
     dma_channel_config c_write;
 
-    self->current_write = *once_write;
-    self->once_write = *loop_write;
-    self->loop_write = *loop_write;
+    self->current_write_buf = *once_write_buf;
+    self->once_write_buf = *loop_write_buf;
+    self->loop_write_buf = *loop_write_buf;
     self->pending_buffers_write = pending_buffers_write;
     self->dma_completed_write = false;
     self->background_stride_in_bytes = stride_in_bytes;
@@ -1115,8 +1118,8 @@ bool common_hal_rp2pio_statemachine_background_write(rp2pio_statemachine_obj_t *
     channel_config_set_bswap(&c_write, swap);
     dma_channel_configure(channel_write, &c_write,
         tx_destination,
-        once_write->info.buf,
-        once_write->info.len / stride_in_bytes,
+        once_write_buf->info.buf,
+        once_write_buf->info.len / stride_in_bytes,
         false);
 
     common_hal_mcu_disable_interrupts();
@@ -1130,15 +1133,15 @@ bool common_hal_rp2pio_statemachine_background_write(rp2pio_statemachine_obj_t *
 }
 
 void rp2pio_statemachine_dma_complete_write(rp2pio_statemachine_obj_t *self, int channel_write) {
-    self->current_write = self->once_write;
-    self->once_write = self->loop_write;
+    self->current_write_buf = self->once_write_buf;
+    self->once_write_buf = self->loop_write_buf;
 
-    if (self->current_write.info.buf) {
+    if (self->current_write_buf.info.buf) {
         if (self->pending_buffers_write > 0) {
             self->pending_buffers_write--;
         }
-        dma_channel_set_read_addr(channel_write, self->current_write.info.buf, false);
-        dma_channel_set_trans_count(channel_write, self->current_write.info.len / self->background_stride_in_bytes, true);
+        dma_channel_set_read_addr(channel_write, self->current_write_buf.info.buf, false);
+        dma_channel_set_trans_count(channel_write, self->current_write_buf.info.len / self->background_stride_in_bytes, true);
     } else {
         self->dma_completed_write = true;
         self->pending_buffers_write = 0; // should be a no-op
@@ -1149,9 +1152,9 @@ bool common_hal_rp2pio_statemachine_stop_background_write(rp2pio_statemachine_ob
     uint8_t pio_index = pio_get_index(self->pio);
     uint8_t sm = self->state_machine;
     rp2pio_statemachine_clear_dma_write(pio_index, sm);
-    memset(&self->current_write, 0, sizeof(self->current_write));
-    memset(&self->once_write, 0, sizeof(self->once_write));
-    memset(&self->loop_write, 0, sizeof(self->loop_write));
+    memset(&self->current_write_buf, 0, sizeof(self->current_write_buf));
+    memset(&self->once_write_buf, 0, sizeof(self->once_write_buf));
+    memset(&self->loop_write_buf, 0, sizeof(self->loop_write_buf));
     self->pending_buffers_write = 0;
     return true;
 }
@@ -1167,14 +1170,15 @@ int common_hal_rp2pio_statemachine_get_pending_write(rp2pio_statemachine_obj_t *
 // =================================================================================
 
 bool common_hal_rp2pio_statemachine_background_read(rp2pio_statemachine_obj_t *self,
-    const sm_buf_info *once_read, const sm_buf_info *loop_read, uint8_t stride_in_bytes, bool swap) {
+    const sm_buf_info *once_read_buf, const sm_buf_info *loop_read_buf, const sm_buf_info *loop2_read_buf,
+    uint8_t stride_in_bytes, bool swap) {
 
     uint8_t pio_index = pio_get_index(self->pio);
     uint8_t sm = self->state_machine;
 
-    int pending_buffers_read = (once_read->info.len != 0) + (loop_read->info.len != 0);
-    if (!once_read->info.len) {
-        once_read = loop_read;
+    int pending_buffers_read = (once_read_buf->info.len != 0) + (loop_read_buf->info.len != 0);
+    if (!once_read_buf->info.len) {
+        once_read_buf = loop_read_buf;
     }
 
     if (SM_DMA_ALLOCATED_READ(pio_index, sm)) {
@@ -1193,11 +1197,11 @@ bool common_hal_rp2pio_statemachine_background_read(rp2pio_statemachine_obj_t *s
         }
 
         common_hal_mcu_disable_interrupts();
-        self->once_read = *once_read;
-        self->loop_read = *loop_read;
+        self->once_read_buf = *once_read_buf;
+        self->loop_read_buf = *loop_read_buf;
         self->pending_buffers_read = pending_buffers_read;
 
-        if (self->dma_completed_read && self->once_read.info.len) {
+        if (self->dma_completed_read && self->once_read_buf.info.len) {
             rp2pio_statemachine_dma_complete_read(self, SM_DMA_GET_CHANNEL_READ(pio_index, sm));
             self->dma_completed_read = false;
         }
@@ -1221,9 +1225,9 @@ bool common_hal_rp2pio_statemachine_background_read(rp2pio_statemachine_obj_t *s
 
     dma_channel_config c_read;
 
-    self->current_read = *once_read;
-    self->once_read = *loop_read;
-    self->loop_read = *loop_read;
+    self->current_read_buf = *once_read_buf;
+    self->once_read_buf = *loop_read_buf;
+    self->loop_read_buf = *loop_read_buf;
     self->pending_buffers_read = pending_buffers_read;
     self->dma_completed_read = false;
 
@@ -1234,9 +1238,9 @@ bool common_hal_rp2pio_statemachine_background_read(rp2pio_statemachine_obj_t *s
     channel_config_set_write_increment(&c_read, true);
     channel_config_set_bswap(&c_read, swap);
     dma_channel_configure(channel_read, &c_read,
-        once_read->info.buf,
+        once_read_buf->info.buf,
         rx_source,
-        once_read->info.len / stride_in_bytes,
+        once_read_buf->info.len / stride_in_bytes,
         false);
 
     common_hal_mcu_disable_interrupts();
@@ -1250,15 +1254,15 @@ bool common_hal_rp2pio_statemachine_background_read(rp2pio_statemachine_obj_t *s
 }
 
 void rp2pio_statemachine_dma_complete_read(rp2pio_statemachine_obj_t *self, int channel_read) {
-    self->current_read = self->once_read;
-    self->once_read = self->loop_read;
+    self->current_read_buf = self->once_read_buf;
+    self->once_read_buf = self->loop_read_buf;
 
-    if (self->current_read.info.buf) {
+    if (self->current_read_buf.info.buf) {
         if (self->pending_buffers_read > 0) {
             self->pending_buffers_read--;
         }
-        dma_channel_set_write_addr(channel_read, self->current_read.info.buf, false);
-        dma_channel_set_trans_count(channel_read, self->current_read.info.len / self->background_stride_in_bytes, true);
+        dma_channel_set_write_addr(channel_read, self->current_read_buf.info.buf, false);
+        dma_channel_set_trans_count(channel_read, self->current_read_buf.info.len / self->background_stride_in_bytes, true);
     } else {
         self->dma_completed_read = true;
         self->pending_buffers_read = 0; // should be a no-op
@@ -1269,9 +1273,9 @@ bool common_hal_rp2pio_statemachine_stop_background_read(rp2pio_statemachine_obj
     uint8_t pio_index = pio_get_index(self->pio);
     uint8_t sm = self->state_machine;
     rp2pio_statemachine_clear_dma_read(pio_index, sm);
-    memset(&self->current_read, 0, sizeof(self->current_read));
-    memset(&self->once_read, 0, sizeof(self->once_read));
-    memset(&self->loop_read, 0, sizeof(self->loop_read));
+    memset(&self->current_read_buf, 0, sizeof(self->current_read_buf));
+    memset(&self->once_read_buf, 0, sizeof(self->once_read_buf));
+    memset(&self->loop_read_buf, 0, sizeof(self->loop_read_buf));
     self->pending_buffers_read = 0;
     return true;
 }
@@ -1304,6 +1308,14 @@ mp_obj_t common_hal_rp2pio_statemachine_get_rxfifo(rp2pio_statemachine_obj_t *se
         return MP_OBJ_FROM_PTR(&self->rxfifo_obj);
     }
     #endif
+    return mp_const_none;
+}
+
+mp_obj_t common_hal_rp2pio_statemachine_get_last_read(rp2pio_statemachine_obj_t *self) {
+    return mp_const_none;
+}
+
+mp_obj_t common_hal_rp2pio_statemachine_get_last_write(rp2pio_statemachine_obj_t *self) {
     return mp_const_none;
 }
 

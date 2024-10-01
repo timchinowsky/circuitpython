@@ -51,8 +51,13 @@ void common_hal_rp2pio_statemachine_run(rp2pio_statemachine_obj_t *self, const u
 // Lengths are in bytes.
 bool common_hal_rp2pio_statemachine_write(rp2pio_statemachine_obj_t *self, const uint8_t *data, size_t len, uint8_t stride_in_bytes, bool swap);
 
-bool common_hal_rp2pio_statemachine_background_write(rp2pio_statemachine_obj_t *self, const sm_buf_info *once, const sm_buf_info *loop, uint8_t stride_in_bytes, bool swap);
-bool common_hal_rp2pio_statemachine_background_read(rp2pio_statemachine_obj_t *self, const sm_buf_info *once_read, const sm_buf_info *loop_read, uint8_t stride_in_bytes, bool swap);
+bool common_hal_rp2pio_statemachine_background_write(rp2pio_statemachine_obj_t *self,
+    const sm_buf_info *once_write_buf, const sm_buf_info *loop_write_buf, const sm_buf_info *loop2_write_buf,
+    uint8_t stride_in_bytes, bool swap);
+
+bool common_hal_rp2pio_statemachine_background_read(rp2pio_statemachine_obj_t *self,
+    const sm_buf_info *once_read_buf, const sm_buf_info *loop_read_buf, const sm_buf_info *loop2_read_buf,
+    uint8_t stride_in_bytes, bool swap);
 
 bool common_hal_rp2pio_statemachine_stop_background_write(rp2pio_statemachine_obj_t *self);
 bool common_hal_rp2pio_statemachine_stop_background_read(rp2pio_statemachine_obj_t *self);
@@ -85,3 +90,6 @@ int common_hal_rp2pio_statemachine_get_pc(rp2pio_statemachine_obj_t *self);
 void common_hal_rp2pio_statemachine_set_interrupt_handler(rp2pio_statemachine_obj_t *self, void (*handler)(void *), void *arg, int mask);
 
 mp_obj_t common_hal_rp2pio_statemachine_get_rxfifo(rp2pio_statemachine_obj_t *self);
+
+mp_obj_t common_hal_rp2pio_statemachine_get_last_read(rp2pio_statemachine_obj_t *self);
+mp_obj_t common_hal_rp2pio_statemachine_get_last_write(rp2pio_statemachine_obj_t *self);
