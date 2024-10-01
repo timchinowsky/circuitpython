@@ -1055,13 +1055,13 @@ MP_DEFINE_CONST_FUN_OBJ_1(rp2pio_statemachine_get_rxfifo_obj, rp2pio_statemachin
 MP_PROPERTY_GETTER(rp2pio_statemachine_rxfifo_obj,
     (mp_obj_t)&rp2pio_statemachine_get_rxfifo_obj);
 
-//|     last_read: array
+
+//|     last_read: array.array
 //|     """Returns the buffer most recently filled by background reads.
 //|
 //|     This property is self-clearing -- once read, subsequent reads
 //|     will return a zero-length buffer until the background read buffer
 //|     changes or restarts.
-//|
 //|     """
 static mp_obj_t rp2pio_statemachine_obj_get_last_read(mp_obj_t self_in) {
     rp2pio_statemachine_obj_t *self = MP_OBJ_TO_PTR(self_in);
@@ -1074,13 +1074,12 @@ MP_PROPERTY_GETTER(rp2pio_statemachine_last_read_obj,
     (mp_obj_t)&rp2pio_statemachine_get_last_read_obj);
 
 
-//|     last_write: array
+//|     last_write: array.array
 //|     """Returns the buffer most recently emptied by background writes.
 //|
 //|     This property is self-clearing -- once read, subsequent reads
 //|     will return a zero-length buffer until the background write buffer
 //|     changes or restarts.
-//|
 //|     """
 //|
 static mp_obj_t rp2pio_statemachine_obj_get_last_write(mp_obj_t self_in) {
