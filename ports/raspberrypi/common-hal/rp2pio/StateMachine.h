@@ -22,6 +22,8 @@ typedef struct sm_buf_info {
     mp_buffer_info_t info;
 } sm_buf_info;
 
+#define RP2PIO_STATEMACHINE_N_BUFS 3
+
 typedef struct {
     mp_obj_base_t base;
     uint32_t pins; // Bitmask of what pins this state machine uses.
@@ -49,8 +51,13 @@ typedef struct {
     // dma-related items
     volatile int pending_buffers_write;
     volatile int pending_buffers_read;
-    sm_buf_info current_write_buf, once_write_buf, loop_write_buf;
-    sm_buf_info current_read_buf, once_read_buf, loop_read_buf;
+    int write_buf_index, read_buf_index;
+    sm_buf_info write_buf[RP2PIO_STATEMACHINE_N_BUFS];
+    sm_buf_info read_buf[RP2PIO_STATEMACHINE_N_BUFS];
+
+    sm_buf_info current_write_buf, next_write_buf_1, next_write_buf_2, next_write_buf_3;
+    sm_buf_info current_read_buf, next_read_buf_1, next_read_buf_2, next_read_buf_3;
+
     int background_stride_in_bytes;
     bool dma_completed_write, byteswap;
     bool dma_completed_read;

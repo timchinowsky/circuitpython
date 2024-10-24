@@ -557,8 +557,8 @@ static mp_obj_t rp2pio_statemachine_background_write(size_t n_args, const mp_obj
     static const mp_arg_t allowed_args[] = {
         { MP_QSTR_once,     MP_ARG_OBJ, {.u_obj = mp_const_none} },
         { MP_QSTR_loop,     MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_obj = mp_const_none} },
-        { MP_QSTR_loop2,     MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_obj = mp_const_none} },
-        { MP_QSTR_swap,   MP_ARG_KW_ONLY | MP_ARG_BOOL, {.u_bool = false} },
+        { MP_QSTR_loop2,    MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_obj = mp_const_none} },
+        { MP_QSTR_swap,     MP_ARG_KW_ONLY | MP_ARG_BOOL, {.u_bool = false} },
     };
     rp2pio_statemachine_obj_t *self = MP_OBJ_TO_PTR(pos_args[0]);
     check_for_deinit(self);
@@ -682,8 +682,8 @@ static mp_obj_t rp2pio_statemachine_background_read(size_t n_args, const mp_obj_
     static const mp_arg_t allowed_args[] = {
         { MP_QSTR_once,     MP_ARG_OBJ, {.u_obj = mp_const_none} },
         { MP_QSTR_loop,     MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_obj = mp_const_none} },
-        { MP_QSTR_loop2,     MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_obj = mp_const_none} },
-        { MP_QSTR_swap,   MP_ARG_KW_ONLY | MP_ARG_BOOL, {.u_bool = false} },
+        { MP_QSTR_loop2,    MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_obj = mp_const_none} },
+        { MP_QSTR_swap,     MP_ARG_KW_ONLY | MP_ARG_BOOL, {.u_bool = false} },
     };
     rp2pio_statemachine_obj_t *self = MP_OBJ_TO_PTR(pos_args[0]);
     check_for_deinit(self);
@@ -696,7 +696,7 @@ static mp_obj_t rp2pio_statemachine_background_read(size_t n_args, const mp_obj_
     size_t stride_in_bytes = 0;
     fill_buf_info(&once_read_info, args[ARG_once].u_obj, &stride_in_bytes, MP_BUFFER_WRITE);
     fill_buf_info(&loop_read_info, args[ARG_loop].u_obj, &stride_in_bytes, MP_BUFFER_WRITE);
-    fill_buf_info(&loop2_read_info, args[ARG_loop].u_obj, &stride_in_bytes, MP_BUFFER_WRITE);
+    fill_buf_info(&loop2_read_info, args[ARG_loop2].u_obj, &stride_in_bytes, MP_BUFFER_WRITE);
     if (!stride_in_bytes) {
         return mp_const_none;
     }
