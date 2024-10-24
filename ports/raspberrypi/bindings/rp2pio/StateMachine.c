@@ -572,6 +572,11 @@ static mp_obj_t rp2pio_statemachine_background_write(size_t n_args, const mp_obj
     fill_buf_info(&once_info, args[ARG_once].u_obj, &stride_in_bytes, MP_BUFFER_READ);
     fill_buf_info(&loop_info, args[ARG_loop].u_obj, &stride_in_bytes, MP_BUFFER_READ);
     fill_buf_info(&loop2_info, args[ARG_loop2].u_obj, &stride_in_bytes, MP_BUFFER_READ);
+
+    self->once_write_buf_obj = args[ARG_once].u_obj;
+    self->loop_write_buf_obj = args[ARG_loop].u_obj;
+    self->loop2_write_buf_obj = args[ARG_loop2].u_obj;
+
     if (!stride_in_bytes) {
         return mp_const_none;
     }
@@ -690,19 +695,21 @@ static mp_obj_t rp2pio_statemachine_background_read(size_t n_args, const mp_obj_
     mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
     mp_arg_parse_all(n_args - 1, pos_args + 1, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
 
-    sm_buf_info once_read_info;
-    sm_buf_info loop_read_info;
-    sm_buf_info loop2_read_info;
     size_t stride_in_bytes = 0;
-    fill_buf_info(&once_read_info, args[ARG_once].u_obj, &stride_in_bytes, MP_BUFFER_WRITE);
-    fill_buf_info(&loop_read_info, args[ARG_loop].u_obj, &stride_in_bytes, MP_BUFFER_WRITE);
-    fill_buf_info(&loop2_read_info, args[ARG_loop2].u_obj, &stride_in_bytes, MP_BUFFER_WRITE);
+
+    self->once_read_buf_obj = args[ARG_once].u_obj;
+    self->loop_read_buf_obj = args[ARG_loop].u_obj;
+    self->loop2_read_buf_obj = args[ARG_loop2].u_obj;
+
+    fill_buf_info(&self->once_read_buf_info, args[ARG_once].u_obj, &stride_in_bytes, MP_BUFFER_WRITE);
+    fill_buf_info(&self->loop_read_buf_info, args[ARG_loop].u_obj, &stride_in_bytes, MP_BUFFER_WRITE);
+    fill_buf_info(&self->loop2_read_buf_info, args[ARG_loop2].u_obj, &stride_in_bytes, MP_BUFFER_WRITE);
+
     if (!stride_in_bytes) {
         return mp_const_none;
     }
 
-    bool ok = common_hal_rp2pio_statemachine_background_read(self, &once_read_info, &loop_read_info, &loop2_read_info,
-        stride_in_bytes, args[ARG_swap].u_bool);
+    bool ok = common_hal_rp2pio_statemachine_background_read(self, stride_in_bytes, args[ARG_swap].u_bool);
 
     if (mp_hal_is_interrupted()) {
         return mp_const_none;

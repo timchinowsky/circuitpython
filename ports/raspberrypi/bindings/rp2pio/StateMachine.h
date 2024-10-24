@@ -56,7 +56,6 @@ bool common_hal_rp2pio_statemachine_background_write(rp2pio_statemachine_obj_t *
     uint8_t stride_in_bytes, bool swap);
 
 bool common_hal_rp2pio_statemachine_background_read(rp2pio_statemachine_obj_t *self,
-    const sm_buf_info *once_read_buf, const sm_buf_info *loop_read_buf, const sm_buf_info *loop2_read_buf,
     uint8_t stride_in_bytes, bool swap);
 
 bool common_hal_rp2pio_statemachine_stop_background_write(rp2pio_statemachine_obj_t *self);

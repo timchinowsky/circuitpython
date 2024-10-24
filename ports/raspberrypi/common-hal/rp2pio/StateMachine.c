@@ -1205,42 +1205,51 @@ int common_hal_rp2pio_statemachine_get_pending_write(rp2pio_statemachine_obj_t *
 
 // =================================================================================
 
-bool common_hal_rp2pio_statemachine_background_read(rp2pio_statemachine_obj_t *self,
-    const sm_buf_info *once_read_buf, const sm_buf_info *loop_read_buf, const sm_buf_info *loop2_read_buf,
-    uint8_t stride_in_bytes, bool swap) {
+bool common_hal_rp2pio_statemachine_background_read(rp2pio_statemachine_obj_t *self, uint8_t stride_in_bytes, bool swap) {
 
     uint8_t pio_index = pio_get_index(self->pio);
     uint8_t sm = self->state_machine;
 
-    int pending_buffers_read = (once_read_buf->info.len != 0) + (loop_read_buf->info.len != 0) + (loop2_read_buf->info.len != 0);
+    self->switched_buffers = false;
+
+    int pending_buffers_read = (self->once_read_buf_info.info.len != 0) + (self->loop_read_buf_info.info.len != 0) + (self->loop2_read_buf_info.info.len != 0);
 
     // If all buffer arguments have nonzero length, read once_read_buf, loop_read_buf, loop2_read_buf and repeat last two forever
 
-    if (!once_read_buf->info.len) {
-        if (!loop_read_buf->info.len) {
+    if (!(self->once_read_buf_info.info.len)) {
+        if (!(self->loop_read_buf_info.info.len)) {
             // If once_read_buf and loop_read_buf have zero length, read loop2_read_buf forever
-            once_read_buf = loop2_read_buf;
-            loop_read_buf = loop2_read_buf;
+            self->once_read_buf_info = self->loop2_read_buf_info;
+            self->once_read_buf_obj = self->loop2_read_buf_obj;
+            self->loop_read_buf_info = self->loop2_read_buf_info;
+            self->loop_read_buf_obj = self->loop2_read_buf_obj;
         } else {
-            if (!loop2_read_buf->info.len) {
+            if (!(self->loop2_read_buf_info.info.len)) {
                 // If once_read_buf and loop2_read_buf have zero length, read loop_read_buf forever
-                once_read_buf = loop_read_buf;
-                loop2_read_buf = loop_read_buf;
+                self->once_read_buf_info = self->loop_read_buf_info;
+                self->once_read_buf_obj = self->loop_read_buf_obj;
+                self->loop2_read_buf_info = self->loop_read_buf_info;
+                self->loop2_read_buf_obj = self->loop_read_buf_obj;
             } else {
                 // If only once_read_buf has zero length, read loop_read_buf, loop2_read_buf, and repeat last two forever
-                once_read_buf = loop_read_buf;
-                loop_read_buf = loop2_read_buf;
-                loop2_read_buf = once_read_buf;
+                self->once_read_buf_info = self->loop_read_buf_info;
+                self->once_read_buf_obj = self->loop_read_buf_obj;
+                self->loop_read_buf_info = self->loop2_read_buf_info;
+                self->loop_read_buf_obj = self->loop2_read_buf_obj;
+                self->loop2_read_buf_info = self->once_read_buf_info;
+                self->loop2_read_buf_obj = self->once_read_buf_obj;
             }
         }
     } else {
-        if (!loop_read_buf->info.len) {
+        if (!(self->loop_read_buf_info.info.len)) {
             // If once_read_buf has nonzero length and loop_read_buf has zero length, read once_read_buf, loop2_read_buf and repeat last buf forever
-            loop_read_buf = loop2_read_buf;
+            self->loop_read_buf_info = self->loop2_read_buf_info;
+            self->loop_read_buf_obj = self->loop2_read_buf_obj;
         } else {
-            if (!loop2_read_buf->info.len) {
+            if (!(self->loop2_read_buf_info.info.len)) {
                 // If once_read_buf has nonzero length and loop2_read_buf have zero length, read once_read_buf, loop_read_buf and repeat last buf forever
-                loop2_read_buf = loop_read_buf;
+                self->loop2_read_buf_info = self->loop_read_buf_info;
+                self->loop2_read_buf_obj = self->loop_read_buf_obj;
             }
         }
     }
@@ -1261,9 +1270,12 @@ bool common_hal_rp2pio_statemachine_background_read(rp2pio_statemachine_obj_t *s
         }
 
         common_hal_mcu_disable_interrupts();
-        self->next_read_buf_1 = *once_read_buf;
-        self->next_read_buf_2 = *loop_read_buf;
-        self->next_read_buf_3 = *loop2_read_buf;
+        self->next_read_buf_1 = self->once_read_buf_info;
+        self->next_read_buf_1_obj = self->once_read_buf_obj;
+        self->next_read_buf_2 = self->loop_read_buf_info;
+        self->next_read_buf_2_obj = self->loop_read_buf_obj;
+        self->next_read_buf_3 = self->loop2_read_buf_info;
+        self->next_read_buf_3_obj = self->loop2_read_buf_obj;
         self->pending_buffers_read = pending_buffers_read;
 
         if (self->dma_completed_read && self->next_read_buf_1.info.len) {
@@ -1290,10 +1302,15 @@ bool common_hal_rp2pio_statemachine_background_read(rp2pio_statemachine_obj_t *s
 
     dma_channel_config c_read;
 
-    self->current_read_buf = *once_read_buf;
-    self->next_read_buf_1 = *loop_read_buf;
-    self->next_read_buf_2 = *loop2_read_buf;
-    self->next_read_buf_3 = *loop_read_buf;
+    self->current_read_buf = self->once_read_buf_info;
+    self->current_read_buf_obj = self->once_read_buf_obj;
+    self->next_read_buf_1 = self->loop_read_buf_info;
+    self->next_read_buf_1_obj = self->loop_read_buf_obj;
+    self->next_read_buf_2 = self->loop2_read_buf_info;
+    self->next_read_buf_2_obj = self->loop2_read_buf_obj;
+    self->next_read_buf_3 = self->loop_read_buf_info;
+    self->next_read_buf_3_obj = self->loop_read_buf_obj;
+
     self->pending_buffers_read = pending_buffers_read;
     self->dma_completed_read = false;
 
@@ -1304,9 +1321,9 @@ bool common_hal_rp2pio_statemachine_background_read(rp2pio_statemachine_obj_t *s
     channel_config_set_write_increment(&c_read, true);
     channel_config_set_bswap(&c_read, swap);
     dma_channel_configure(channel_read, &c_read,
-        once_read_buf->info.buf,
+        self->once_read_buf_info.info.buf,
         rx_source,
-        once_read_buf->info.len / stride_in_bytes,
+        self->once_read_buf_info.info.len / stride_in_bytes,
         false);
 
     common_hal_mcu_disable_interrupts();
@@ -1322,9 +1339,13 @@ bool common_hal_rp2pio_statemachine_background_read(rp2pio_statemachine_obj_t *s
 void rp2pio_statemachine_dma_complete_read(rp2pio_statemachine_obj_t *self, int channel_read) {
 
     self->current_read_buf = self->next_read_buf_1;
+    self->current_read_buf_obj = self->next_read_buf_1_obj;
     self->next_read_buf_1 = self->next_read_buf_2;
+    self->next_read_buf_1_obj = self->next_read_buf_2_obj;
     self->next_read_buf_2 = self->next_read_buf_3;
+    self->next_read_buf_2_obj = self->next_read_buf_3_obj;
     self->next_read_buf_3 = self->next_read_buf_1;
+    self->next_read_buf_3_obj = self->next_read_buf_1_obj;
 
     if (self->current_read_buf.info.buf) {
         if (self->pending_buffers_read > 0) {
@@ -1336,6 +1357,8 @@ void rp2pio_statemachine_dma_complete_read(rp2pio_statemachine_obj_t *self, int 
         self->dma_completed_read = true;
         self->pending_buffers_read = 0; // should be a no-op
     }
+
+    self->switched_buffers = true;
 }
 
 bool common_hal_rp2pio_statemachine_stop_background_read(rp2pio_statemachine_obj_t *self) {
@@ -1382,7 +1405,11 @@ mp_obj_t common_hal_rp2pio_statemachine_get_rxfifo(rp2pio_statemachine_obj_t *se
 }
 
 mp_obj_t common_hal_rp2pio_statemachine_get_last_read(rp2pio_statemachine_obj_t *self) {
-    return mp_const_none;
+    if (self->switched_buffers) {
+        self->switched_buffers = false;
+        return self->next_read_buf_1_obj;
+    }
+    return mp_const_empty_bytes;
 }
 
 mp_obj_t common_hal_rp2pio_statemachine_get_last_write(rp2pio_statemachine_obj_t *self) {

@@ -55,8 +55,19 @@ typedef struct {
     sm_buf_info write_buf[RP2PIO_STATEMACHINE_N_BUFS];
     sm_buf_info read_buf[RP2PIO_STATEMACHINE_N_BUFS];
 
-    sm_buf_info current_write_buf, next_write_buf_1, next_write_buf_2, next_write_buf_3;
+    mp_obj_t once_read_buf_obj, loop_read_buf_obj, loop2_read_buf_obj;
+    sm_buf_info once_read_buf_info, loop_read_buf_info, loop2_read_buf_info;
+
     sm_buf_info current_read_buf, next_read_buf_1, next_read_buf_2, next_read_buf_3;
+    mp_obj_t current_read_buf_obj, next_read_buf_1_obj, next_read_buf_2_obj, next_read_buf_3_obj;
+
+    mp_obj_t once_write_buf_obj, loop_write_buf_obj, loop2_write_buf_obj;
+    sm_buf_info once_write_buf_info, loop_write_buf_info, loop2_write_buf_info;
+
+    mp_obj_t current_write_buf_obj, next_write_buf_1_obj, next_write_buf_2_obj, next_write_buf_3_obj;
+    sm_buf_info current_write_buf, next_write_buf_1, next_write_buf_2, next_write_buf_3;
+
+    bool switched_buffers;
 
     int background_stride_in_bytes;
     bool dma_completed_write, byteswap;
