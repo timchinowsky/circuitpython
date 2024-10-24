@@ -638,6 +638,9 @@ static mp_obj_t rp2pio_statemachine_obj_get_pending_write(mp_obj_t self_in) {
 }
 MP_DEFINE_CONST_FUN_OBJ_1(rp2pio_statemachine_get_pending_write_obj, rp2pio_statemachine_obj_get_pending_write);
 
+MP_PROPERTY_GETTER(rp2pio_statemachine_pending_obj,
+    (mp_obj_t)&rp2pio_statemachine_get_pending_write_obj);
+
 MP_PROPERTY_GETTER(rp2pio_statemachine_pending_write_obj,
     (mp_obj_t)&rp2pio_statemachine_get_pending_write_obj);
 
