@@ -623,7 +623,6 @@ MP_DEFINE_CONST_FUN_OBJ_1(rp2pio_statemachine_get_writing_obj, rp2pio_statemachi
 MP_PROPERTY_GETTER(rp2pio_statemachine_writing_obj,
     (mp_obj_t)&rp2pio_statemachine_get_writing_obj);
 
-
 //|     pending_write: int
 //|     pending: int
 //|     """Returns the number of pending buffers for background writing.

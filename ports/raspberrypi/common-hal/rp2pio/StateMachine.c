@@ -1156,6 +1156,8 @@ bool common_hal_rp2pio_statemachine_background_write(rp2pio_statemachine_obj_t *
         false);
 
     common_hal_mcu_disable_interrupts();
+    // Acknowledge any previous pending interrupt
+    dma_hw->ints0 |= 1u << channel_write;
     MP_STATE_PORT(background_pio)[channel_write] = self;
     dma_hw->inte0 |= 1u << channel_write;
     irq_set_mask_enabled(1 << DMA_IRQ_0, true);
@@ -1327,6 +1329,8 @@ bool common_hal_rp2pio_statemachine_background_read(rp2pio_statemachine_obj_t *s
         false);
 
     common_hal_mcu_disable_interrupts();
+    // Acknowledge any previous pending interrupt
+    dma_hw->ints0 |= 1u << channel_read;
     MP_STATE_PORT(background_pio)[channel_read] = self;
     dma_hw->inte1 |= 1u << channel_read;
     irq_set_mask_enabled(1 << DMA_IRQ_1, true);
