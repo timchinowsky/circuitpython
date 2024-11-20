@@ -60,6 +60,8 @@ typedef struct {
     sm_buf_info once_write_buf_info, loop_write_buf_info, loop2_write_buf_info;
     sm_buf_info current_write_buf, next_write_buf_1, next_write_buf_2, next_write_buf_3;
 
+    mp_obj_t write_audio, read_audio;
+
     bool switched_write_buffers, switched_read_buffers;
 
     int background_stride_in_bytes;

@@ -506,7 +506,7 @@ MP_DEFINE_CONST_FUN_OBJ_KW(rp2pio_statemachine_write_obj, 2, rp2pio_statemachine
 //|         Then the ``once`` and/or ``loop`` buffers are queued. and the function returns.
 //|         The ``once`` buffer (if specified) will be written just once.
 //|         Finally, the ``loop`` and/or ``loop2`` buffer (if specified) will continue being looped indefinitely.  If both ``loop`` and ``loop2`` are specified, they will alternate.
-//|         
+//|
 //|         Writes to the FIFO will match the input buffer's element size. For example, bytearray elements
 //|         will perform 8 bit writes to the PIO FIFO. The RP2040's memory bus will duplicate the value into
 //|         the other byte positions. So, pulling more data in the PIO assembly will read the duplicated values.
@@ -1181,6 +1181,8 @@ static const mp_rom_map_elem_t rp2pio_statemachine_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_last_read), MP_ROM_PTR(&rp2pio_statemachine_last_read_obj) },
     { MP_ROM_QSTR(MP_QSTR_last_write), MP_ROM_PTR(&rp2pio_statemachine_last_write_obj) },
 
+    { MP_ROM_QSTR(MP_QSTR_write_audio), MP_ROM_PTR(&rp2pio_statemachine_write_audio_obj) },
+    { MP_ROM_QSTR(MP_QSTR_read_audio), MP_ROM_PTR(&rp2pio_statemachine_read_audio_obj) },
 };
 static MP_DEFINE_CONST_DICT(rp2pio_statemachine_locals_dict, rp2pio_statemachine_locals_dict_table);
 

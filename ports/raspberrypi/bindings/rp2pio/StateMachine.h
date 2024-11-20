@@ -75,6 +75,12 @@ bool common_hal_rp2pio_statemachine_write_readinto(rp2pio_statemachine_obj_t *se
 uint32_t common_hal_rp2pio_statemachine_get_frequency(rp2pio_statemachine_obj_t *self);
 void common_hal_rp2pio_statemachine_set_frequency(rp2pio_statemachine_obj_t *self, uint32_t frequency);
 
+mp_obj_t common_hal_rp2pio_statemachine_get_write_audio(rp2pio_statemachine_obj_t *self);
+void common_hal_rp2pio_statemachine_set_write_audio(rp2pio_statemachine_obj_t *self, mp_obj_t write_audio);
+
+mp_obj_t common_hal_rp2pio_statemachine_get_read_audio(rp2pio_statemachine_obj_t *self);
+void common_hal_rp2pio_statemachine_set_read_audio(rp2pio_statemachine_obj_t *self, mp_obj_t read_audio);
+
 bool common_hal_rp2pio_statemachine_get_rxstall(rp2pio_statemachine_obj_t *self);
 void common_hal_rp2pio_statemachine_clear_rxfifo(rp2pio_statemachine_obj_t *self);
 

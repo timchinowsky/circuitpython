@@ -449,6 +449,9 @@ bool rp2pio_statemachine_construct(rp2pio_statemachine_obj_t *self,
 
     sm_config_set_fifo_join(&c, join);
 
+    self->read_audio = mp_const_none;
+    self->write_audio = mp_const_none;
+
     // TODO: these arguments
     // int mov_status_type, int mov_status_n,
     // int set_count, int out_count
@@ -752,6 +755,22 @@ void common_hal_rp2pio_statemachine_set_frequency(rp2pio_statemachine_obj_t *sel
     pio_sm_set_clkdiv_int_frac(self->pio, self->state_machine, div256 / 256, div256 % 256);
     // Reset the clkdiv counter in case our new TOP is lower.
     pio_sm_clkdiv_restart(self->pio, self->state_machine);
+}
+
+mp_obj_t common_hal_rp2pio_statemachine_get_write_audio(rp2pio_statemachine_obj_t *self) {
+    return self->write_audio;
+}
+
+void common_hal_rp2pio_statemachine_set_write_audio(rp2pio_statemachine_obj_t *self, mp_obj_t write_audio) {
+    self->write_audio = write_audio;
+}
+
+mp_obj_t common_hal_rp2pio_statemachine_get_read_audio(rp2pio_statemachine_obj_t *self) {
+    return self->read_audio;
+}
+
+void common_hal_rp2pio_statemachine_set_read_audio(rp2pio_statemachine_obj_t *self, mp_obj_t read_audio) {
+    self->read_audio = read_audio;
 }
 
 void rp2pio_statemachine_reset_ok(PIO pio, int sm) {
