@@ -961,6 +961,54 @@ MP_PROPERTY_GETSET(rp2pio_statemachine_frequency_obj,
     (mp_obj_t)&rp2pio_statemachine_get_frequency_obj,
     (mp_obj_t)&rp2pio_statemachine_set_frequency_obj);
 
+//|     write_audio: iterable
+//|     """Specifies audiobuffers to be used to fill background_write buffers.
+//|     """
+
+static mp_obj_t rp2pio_statemachine_obj_get_write_audio(mp_obj_t self_in) {
+    rp2pio_statemachine_obj_t *self = MP_OBJ_TO_PTR(self_in);
+    check_for_deinit(self);
+    return common_hal_rp2pio_statemachine_get_write_audio(self);
+}
+MP_DEFINE_CONST_FUN_OBJ_1(rp2pio_statemachine_get_write_audio_obj, rp2pio_statemachine_obj_get_write_audio);
+
+static mp_obj_t rp2pio_statemachine_obj_set_write_audio(mp_obj_t self_in, mp_obj_t write_audio) {
+    rp2pio_statemachine_obj_t *self = MP_OBJ_TO_PTR(self_in);
+    check_for_deinit(self);
+    common_hal_rp2pio_statemachine_set_write_audio(self, write_audio);
+    return mp_const_none;
+}
+MP_DEFINE_CONST_FUN_OBJ_2(rp2pio_statemachine_set_write_audio_obj, rp2pio_statemachine_obj_set_write_audio);
+
+MP_PROPERTY_GETSET(rp2pio_statemachine_write_audio_obj,
+    (mp_obj_t)&rp2pio_statemachine_get_write_audio_obj,
+    (mp_obj_t)&rp2pio_statemachine_set_write_audio_obj);
+
+
+//|     read_audio: iterable
+//|     """Specifies audiobuffers to be sourced from background_read buffers.
+//|     """
+
+static mp_obj_t rp2pio_statemachine_obj_get_read_audio(mp_obj_t self_in) {
+    rp2pio_statemachine_obj_t *self = MP_OBJ_TO_PTR(self_in);
+    check_for_deinit(self);
+    return common_hal_rp2pio_statemachine_get_read_audio(self);
+}
+MP_DEFINE_CONST_FUN_OBJ_1(rp2pio_statemachine_get_read_audio_obj, rp2pio_statemachine_obj_get_read_audio);
+
+static mp_obj_t rp2pio_statemachine_obj_set_read_audio(mp_obj_t self_in, mp_obj_t read_audio) {
+    rp2pio_statemachine_obj_t *self = MP_OBJ_TO_PTR(self_in);
+    check_for_deinit(self);
+    common_hal_rp2pio_statemachine_set_read_audio(self, read_audio);
+    return mp_const_none;
+}
+MP_DEFINE_CONST_FUN_OBJ_2(rp2pio_statemachine_set_read_audio_obj, rp2pio_statemachine_obj_set_read_audio);
+
+MP_PROPERTY_GETSET(rp2pio_statemachine_read_audio_obj,
+    (mp_obj_t)&rp2pio_statemachine_get_read_audio_obj,
+    (mp_obj_t)&rp2pio_statemachine_set_read_audio_obj);
+
+
 //|     txstall: bool
 //|     """True when the state machine has stalled due to a full TX FIFO since the last
 //|        `clear_txstall` call."""
